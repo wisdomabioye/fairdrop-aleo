@@ -159,7 +159,7 @@ export function TransactionTracker() {
           ) : (
             <>
               <Check className="h-4 w-4 text-success" />
-              <span className="text-sm font-medium">All Tx confirmed</span>
+              <span className="text-sm font-medium">All Tx Confirmed</span>
             </>
           )}
           <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
