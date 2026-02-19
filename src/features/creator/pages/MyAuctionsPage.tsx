@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { RefreshCw } from "lucide-react";
 import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
-import { useAuctions } from "@/features/auction/hooks/useAuctions";
+import { useUserAuctions } from "@/features/auction/hooks/useUserAuctions";
 import { ConnectWalletPrompt } from "@/shared/components/ConnectWalletPrompt";
 import { useCurrentPrice } from "@/features/auction/hooks/useCurrentPrice";
 import { AuctionCard } from "@/features/auction/components/AuctionCard";
@@ -10,7 +10,7 @@ import { Card } from "@/shared/components/ui/Card";
 import { Button } from "@/shared/components/ui/Button";
 import { Spinner } from "@/shared/components/ui/Spinner";
 import { PageHeader } from "@/shared/components/ui/PageHeader";
-import type { AuctionEntry } from "@/features/auction/hooks/useAuctions";
+import type { AuctionEntry } from "@/features/auction/hooks/useUserAuctions";
 
 function AuctionItem({ entry, blockHeight }: { entry: AuctionEntry; blockHeight: number }) {
   const { price, status: priceStatus } = useCurrentPrice(entry.config, blockHeight);
@@ -35,16 +35,17 @@ function AuctionItem({ entry, blockHeight }: { entry: AuctionEntry; blockHeight:
 export function MyAuctionsPage() {
   const { publicKey } = useWallet();
   const { blockHeight } = useBlockHeight();
-  const { auctions, loading, error, refetch } = useAuctions({
-    creatorFilter: publicKey ?? undefined,
-    limit: 100,
-  });
+  const { auctions, count, loading, error, refetch } = useUserAuctions();
 
   return (
     <div className="space-y-8 animate-fade-in">
       <PageHeader
         title="My Auctions"
-        description="Auctions you've created — click Manage to close or withdraw."
+        description={
+          count !== null
+            ? `You've created ${count} auction${count !== 1 ? "s" : ""} — click Manage to close or withdraw.`
+            : "Auctions you've created — click Manage to close or withdraw."
+        }
         action={
           <div className="flex items-center gap-3">
             <button

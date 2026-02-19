@@ -83,6 +83,18 @@ mapping auction_index:
     key as u64.public;
     value as field.public;
 
+mapping creator_auction_count:
+    key as address.public;
+    value as u64.public;
+
+mapping creator_latest_auction:
+    key as address.public;
+    value as field.public;
+
+mapping auction_prev_by_creator:
+    key as field.public;
+    value as field.public;
+
 function create_token:
     input r0 as address.private;
     input r1 as field.private;
@@ -174,9 +186,15 @@ finalize create_auction:
     set r29 into auction_states[r27];
     set r2 into escrow_sales[r27];
     set r27 into auction_index[r25.total_auctions];
-    add r25.total_auctions 1u64 into r30;
-    cast r30 r25.total_bids into r31 as Stats;
-    set r31 into stats[0field];
+    get.or_use creator_auction_count[r0] 0u64 into r30;
+    add r30 1u64 into r31;
+    set r31 into creator_auction_count[r0];
+    get.or_use creator_latest_auction[r0] 0field into r32;
+    set r32 into auction_prev_by_creator[r27];
+    set r27 into creator_latest_auction[r0];
+    add r25.total_auctions 1u64 into r33;
+    cast r33 r25.total_bids into r34 as Stats;
+    set r34 into stats[0field];
 
 function place_bid:
     input r0 as Token.record;

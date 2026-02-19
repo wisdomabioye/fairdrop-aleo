@@ -50,3 +50,20 @@ export async function getCreatorWithdrawn(auctionId: string): Promise<string | n
 export async function getUnsoldWithdrawn(auctionId: string): Promise<string | null> {
   return getMappingValue("unsold_withdrawn", auctionId);
 }
+
+/** How many auctions a creator has made. Returns 0 if none. */
+export async function getCreatorAuctionCount(creator: string): Promise<number> {
+  const raw = await getMappingValue("creator_auction_count", creator);
+  if (!raw) return 0;
+  return parseInt(raw.replace(/u64$/, ""), 10) || 0;
+}
+
+/** Head of the creator's linked list — their most recent auction_id. */
+export async function getCreatorLatestAuction(creator: string): Promise<string | null> {
+  return getMappingValue("creator_latest_auction", creator);
+}
+
+/** Previous auction_id for the same creator. "0field" means this was their first. */
+export async function getAuctionPrevByCreator(auctionId: string): Promise<string | null> {
+  return getMappingValue("auction_prev_by_creator", auctionId);
+}

@@ -111,6 +111,15 @@ program fairdrop.aleo {
     // Key = total_auctions value at creation time (0-based sequential u64).
     mapping auction_index: u64 => field;
 
+    // Per-creator auction count. Enables instant zero-check before traversal.
+    mapping creator_auction_count: address => u64;
+
+    // Per-creator linked list for O(K) auction discovery — no BHP256 needed.
+    // Head: creator address → most recent auction_id (0field = no auctions yet).
+    mapping creator_latest_auction: address => field;
+    // Link: auction_id → that creator's previous auction_id (0field = first auction).
+    mapping auction_prev_by_creator: field => field;
+
     // =========================================================================
     // 1. Token Helpers
     // =========================================================================
@@ -242,10 +251,17 @@ program fairdrop.aleo {
         // Lock sale tokens in escrow.
         escrow_sales.set(auction_id, supply);
 
-        // Register auction in the sequential index for discovery.
+        // Register auction in the global sequential index for discovery.
         auction_index.set(current_stats.total_auctions, auction_id);
 
-        // Increment auction counter.
+        // Update per-creator count and linked list for efficient creator discovery.
+        let creator_count: u64 = creator_auction_count.get_or_use(creator, 0u64);
+        creator_auction_count.set(creator, creator_count + 1u64);
+        let prev_head: field = creator_latest_auction.get_or_use(creator, 0field);
+        auction_prev_by_creator.set(auction_id, prev_head);
+        creator_latest_auction.set(creator, auction_id);
+
+        // Increment global auction counter.
         stats.set(0field, Stats {
             total_auctions: current_stats.total_auctions + 1u64,
             total_bids: current_stats.total_bids,
