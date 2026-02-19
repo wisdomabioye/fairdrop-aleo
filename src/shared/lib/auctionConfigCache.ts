@@ -63,3 +63,54 @@ export function cacheConfigs(entries: Record<string, string>): void {
   Object.assign(map, entries);
   save(map);
 }
+
+// ─── Creator ID list cache ─────────────────────────────────────────────────────
+// Caches the ordered list of auction IDs for a creator so the linked list
+// traversal can be skipped entirely when the count hasn't changed.
+
+function idCacheKey(address: string): string {
+  return `fairdrop_creator_ids_v1_${address}`;
+}
+
+export function getCachedCreatorIds(address: string): string[] | null {
+  try {
+    const raw = localStorage.getItem(idCacheKey(address));
+    return raw ? (JSON.parse(raw) as string[]) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function cacheCreatorIds(address: string, ids: string[]): void {
+  try {
+    localStorage.setItem(idCacheKey(address), JSON.stringify(ids));
+  } catch { /* quota — best effort */ }
+}
+
+// ─── Global auction ID list cache ─────────────────────────────────────────────
+// Caches the full ordered ID list keyed by the total_auctions count.
+// If count hasn't changed, the list is identical — skip all auction_index fetches.
+
+const GLOBAL_IDS_KEY = "fairdrop_global_ids_v1";
+
+interface GlobalIdCache {
+  count: number;
+  ids: string[];
+}
+
+export function getCachedGlobalIds(count: number): string[] | null {
+  try {
+    const raw = localStorage.getItem(GLOBAL_IDS_KEY);
+    if (!raw) return null;
+    const cached = JSON.parse(raw) as GlobalIdCache;
+    return cached.count === count ? cached.ids : null;
+  } catch {
+    return null;
+  }
+}
+
+export function cacheGlobalIds(count: number, ids: string[]): void {
+  try {
+    localStorage.setItem(GLOBAL_IDS_KEY, JSON.stringify({ count, ids }));
+  } catch { /* quota — best effort */ }
+}

@@ -7,7 +7,12 @@ import {
   getAuctionConfig,
   getAuctionState,
 } from "@/shared/lib/mappings";
-import { partitionByCache, cacheConfigs } from "@/shared/lib/auctionConfigCache";
+import {
+  partitionByCache,
+  cacheConfigs,
+  getCachedCreatorIds,
+  cacheCreatorIds,
+} from "@/shared/lib/auctionConfigCache";
 import {
   parseAuctionConfig,
   parseAuctionState,
@@ -56,13 +61,21 @@ export function useUserAuctions() {
         return;
       }
 
-      // 2. Traverse the linked list newest → oldest
-      const ids: string[] = [];
-      let cursor = await getCreatorLatestAuction(publicKey);
+      // 2. Use cached ID list if count matches — skip linked list traversal entirely.
+      //    If count differs (new auction created), traverse to get updated list.
+      let ids: string[];
+      const cachedIds = getCachedCreatorIds(publicKey);
 
-      while (cursor && cursor !== "0field" && ids.length < k) {
-        ids.push(cursor);
-        cursor = await getAuctionPrevByCreator(cursor);
+      if (cachedIds && cachedIds.length === k) {
+        ids = cachedIds;
+      } else {
+        ids = [];
+        let cursor = await getCreatorLatestAuction(publicKey);
+        while (cursor && cursor !== "0field" && ids.length < k) {
+          ids.push(cursor);
+          cursor = await getAuctionPrevByCreator(cursor);
+        }
+        cacheCreatorIds(publicKey, ids);
       }
 
       if (ids.length === 0) {

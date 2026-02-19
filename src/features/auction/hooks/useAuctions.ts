@@ -5,7 +5,12 @@ import {
   getAuctionConfig,
   getAuctionState,
 } from "@/shared/lib/mappings";
-import { partitionByCache, cacheConfigs } from "@/shared/lib/auctionConfigCache";
+import {
+  partitionByCache,
+  cacheConfigs,
+  getCachedGlobalIds,
+  cacheGlobalIds,
+} from "@/shared/lib/auctionConfigCache";
 import {
   parseStats,
   parseAuctionConfig,
@@ -65,14 +70,23 @@ export function useAuctions(options: UseAuctionsOptions = {}) {
         return;
       }
 
-      // 2. Batch-fetch auction IDs newest-first, capped at limit
-      const startIdx = Math.max(0, count - limit);
-      const indices = Array.from(
-        { length: count - startIdx },
-        (_, i) => count - 1 - i,
-      );
-      const idResults = await Promise.all(indices.map((i) => getAuctionIndex(i)));
-      const validIds = idResults.filter((id): id is string => !!id);
+      // 2. Fetch auction IDs newest-first — use cache if count hasn't changed.
+      //    Cache is keyed by count so any new auction automatically invalidates it.
+      let validIds: string[];
+      const cachedIds = getCachedGlobalIds(count);
+
+      if (cachedIds) {
+        validIds = cachedIds.slice(0, limit);
+      } else {
+        const startIdx = Math.max(0, count - limit);
+        const indices = Array.from(
+          { length: count - startIdx },
+          (_, i) => count - 1 - i,
+        );
+        const idResults = await Promise.all(indices.map((i) => getAuctionIndex(i)));
+        validIds = idResults.filter((id): id is string => !!id);
+        cacheGlobalIds(count, validIds);
+      }
 
       // 3. Configs: cache-first
       const { hit: cachedConfigs, miss: uncachedIds } = partitionByCache(validIds);
