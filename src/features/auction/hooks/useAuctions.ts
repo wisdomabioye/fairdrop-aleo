@@ -5,6 +5,7 @@ import {
   getAuctionConfig,
   getAuctionState,
 } from "@/shared/lib/mappings";
+import { partitionByCache, cacheConfigs } from "@/shared/lib/auctionConfigCache";
 import {
   parseStats,
   parseAuctionConfig,
@@ -31,8 +32,10 @@ interface UseAuctionsOptions {
  * Flow:
  *  1. Read `stats` → get total_auctions count
  *  2. Batch-fetch `auction_index[n-1..0]` (newest first) → get auction IDs
- *  3. Batch-fetch `auction_configs` + `auction_states` for each ID
- *  4. Optionally filter by creator address
+ *  3. Configs: serve from localStorage cache; only RPC-fetch what's missing
+ *     (configs are immutable after creation, so cached values never go stale)
+ *  4. States: always fetched fresh (mutate throughout the auction lifecycle)
+ *  5. Optionally filter by creator address
  *
  * Falls back to an empty list if the `auction_index` mapping hasn't been
  * deployed yet (program upgrade required).
@@ -75,16 +78,35 @@ export function useAuctions(options: UseAuctionsOptions = {}) {
       // 3. Batch-fetch auction IDs from the index
       const idResults = await Promise.all(indices.map((i) => getAuctionIndex(i)));
 
-      // 4. Batch-fetch config + state for all valid IDs
+      // 4. Fetch configs (cache-first) + states (always fresh)
       const validIds = idResults.filter((id): id is string => !!id);
+
+      // Configs are immutable after creation — serve from cache where possible
+      const { hit: cachedConfigs, miss: uncachedIds } = partitionByCache(validIds);
+
+      // Only go to RPC for configs we don't have locally
+      const fetchedConfigPairs = await Promise.all(
+        uncachedIds.map(async (id) => {
+          const raw = await getAuctionConfig(id);
+          return [id, raw] as const;
+        })
+      );
+      const newlyFetched: Record<string, string> = {};
+      for (const [id, raw] of fetchedConfigPairs) {
+        if (raw) newlyFetched[id] = raw;
+      }
+      cacheConfigs(newlyFetched); // persist for next load
+
+      // Merge cache hits + freshly fetched into one lookup
+      const allConfigRaws: Record<string, string> = { ...cachedConfigs, ...newlyFetched };
+
+      // States always fetched fresh (they mutate throughout the auction lifecycle)
       const entries = await Promise.all(
         validIds.map(async (id): Promise<AuctionEntry | null> => {
+          const configRaw = allConfigRaws[id];
+          if (!configRaw) return null;
           try {
-            const [configRaw, stateRaw] = await Promise.all([
-              getAuctionConfig(id),
-              getAuctionState(id),
-            ]);
-            if (!configRaw) return null;
+            const stateRaw = await getAuctionState(id);
             return {
               config: parseAuctionConfig(configRaw),
               state: stateRaw ? parseAuctionState(stateRaw) : null,
