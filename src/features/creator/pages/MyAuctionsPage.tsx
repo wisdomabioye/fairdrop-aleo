@@ -38,7 +38,7 @@ export function MyAuctionsPage() {
   const { auctions, count, loading, error, refetch } = useUserAuctions();
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="mx-auto max-w-3xl space-y-8 animate-fade-in">
       <PageHeader
         title="My Auctions"
         description={
