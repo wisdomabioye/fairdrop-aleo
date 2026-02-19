@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { RefreshCw } from "lucide-react";
 import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
 import { useAuctions } from "@/features/auction/hooks/useAuctions";
+import { ConnectWalletPrompt } from "@/shared/components/ConnectWalletPrompt";
 import { useCurrentPrice } from "@/features/auction/hooks/useCurrentPrice";
 import { AuctionCard } from "@/features/auction/components/AuctionCard";
 import { useBlockHeight } from "@/shared/hooks/useBlockHeight";
@@ -62,8 +63,11 @@ export function MyAuctionsPage() {
       />
 
       {!publicKey && (
-        <Card className="py-10 text-center">
-          <p className="text-muted-foreground">Connect your wallet to see your auctions.</p>
+        <Card>
+          <ConnectWalletPrompt
+            title="Connect to see your auctions"
+            description="Your auction history is filtered by your wallet address — connect to view and manage the auctions you've created."
+          />
         </Card>
       )}
 

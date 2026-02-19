@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
+import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
 import { useRecords } from "@/shared/hooks/useRecords";
 import { useTransaction } from "@/shared/hooks/useTransaction";
 import { useAuction } from "@/features/auction/hooks/useAuction";
+import { ConnectWalletPrompt } from "@/shared/components/ConnectWalletPrompt";
 import { BidRecordSelector } from "@/shared/components/RecordSelector";
 import { TransactionButton } from "@/shared/components/TransactionButton";
 import { Card } from "@/shared/components/ui/Card";
@@ -11,6 +13,7 @@ import { PageHeader } from "@/shared/components/ui/PageHeader";
 import type { BidRecord } from "@/shared/types/auction";
 
 export function ClaimPage() {
+  const { publicKey } = useWallet();
   const { bidRecords, fetchRecords, markSpent } = useRecords();
   const [selectedBid, setSelectedBid] = useState<BidRecord | null>(null);
   const [success, setSuccess] = useState(false);
@@ -18,7 +21,7 @@ export function ClaimPage() {
 
   const { config, state } = useAuction(selectedBid?.auction_id);
 
-  useEffect(() => { fetchRecords(); }, [fetchRecords]);
+  useEffect(() => { if (publicKey) fetchRecords(); }, [fetchRecords, publicKey]);
 
   const breakdown = useMemo(() => {
     if (!selectedBid || !state?.cleared) return null;
@@ -55,7 +58,16 @@ export function ClaimPage() {
         description="Redeem your bid for sale tokens and payment refund."
       />
 
-      <Card>
+      {!publicKey && (
+        <Card>
+          <ConnectWalletPrompt
+            title="Connect to claim"
+            description="Your bid records are privately encrypted. Connect your wallet to redeem sale tokens and receive your refund."
+          />
+        </Card>
+      )}
+
+      {publicKey && <Card>
         <div className="space-y-5">
           <BidRecordSelector
             records={bidRecords}
@@ -104,7 +116,7 @@ export function ClaimPage() {
             Claim Tokens
           </TransactionButton>
         </div>
-      </Card>
+      </Card>}
     </div>
   );
 }

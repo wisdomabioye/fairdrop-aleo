@@ -7,6 +7,7 @@
     "build": "vite build",
     "dev-webpack": "webpack serve",
     "build:vite": "vite build",
+    "clean": "rm -rf dist/",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "type-check": "npx tsc --noEmit",

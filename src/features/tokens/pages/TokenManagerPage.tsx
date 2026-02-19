@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
+import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
 import { useRecords } from "@/shared/hooks/useRecords";
 import { useTransaction } from "@/shared/hooks/useTransaction";
+import { ConnectWalletPrompt } from "@/shared/components/ConnectWalletPrompt";
 import { TokenCard } from "@/shared/components/TokenCard";
 import { TokenGrid } from "@/shared/components/TokenGrid";
 import { TransactionButton } from "@/shared/components/TransactionButton";
@@ -266,11 +268,12 @@ const TABS = [
 type Tab = (typeof TABS)[number]["key"];
 
 export function TokenManagerPage() {
+  const { publicKey } = useWallet();
   const { tokenRecords, loading, fetchRecords, markSpent } = useRecords();
   const [tab, setTab] = useState<Tab>("join");
   const [success, setSuccess] = useState<string | null>(null);
 
-  useEffect(() => { fetchRecords(); }, [fetchRecords]);
+  useEffect(() => { if (publicKey) fetchRecords(); }, [fetchRecords, publicKey]);
 
   const handleDone = (msg: string) => {
     setSuccess(msg);
@@ -310,7 +313,12 @@ export function TokenManagerPage() {
       <Tabs tabs={TABS} active={tab} onChange={handleTabChange} />
 
       <Card>
-        {tab === "join" ? (
+        {!publicKey ? (
+          <ConnectWalletPrompt
+            title="Connect to manage tokens"
+            description="Your token records are private records encrypted to your address. Connect your wallet to join or split them."
+          />
+        ) : tab === "join" ? (
           <JoinTab key="join" tokenRecords={tokenRecords} onDone={handleDone} onMarkSpent={markSpent} />
         ) : (
           <SplitTab key="split" tokenRecords={tokenRecords} onDone={handleDone} onMarkSpent={markSpent} />
