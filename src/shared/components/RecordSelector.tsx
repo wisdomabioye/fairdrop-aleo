@@ -29,7 +29,7 @@ export function TokenRecordSelector({
       {filtered.length === 0 ? (
         <p className="text-sm text-muted-foreground">No matching token records found.</p>
       ) : (
-        <div className="space-y-2">
+        <div className="max-h-52 overflow-y-auto rounded-xl pr-0.5 space-y-2">
           {filtered.map((record) => {
             const isSpent    = !!record.spent;
             const isSelected = selected?._raw === record._raw;
@@ -69,7 +69,7 @@ export function TokenRecordSelector({
           })}
 
           {filtered.some((r) => r.spent) && (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground px-1">
               Spent records will disappear once the wallet confirms them.
               New records may take a few minutes to appear.
             </p>
@@ -107,7 +107,7 @@ export function BidRecordSelector({
       {filtered.length === 0 ? (
         <p className="text-sm text-muted-foreground">No matching bid records found.</p>
       ) : (
-        <div className="space-y-2">
+        <div className="max-h-52 overflow-y-auto rounded-xl pr-0.5 space-y-2">
           {filtered.map((record) => {
             const isSpent    = !!record.spent;
             const isSelected = selected?._raw === record._raw;
@@ -151,7 +151,7 @@ export function BidRecordSelector({
           })}
 
           {filtered.some((r) => r.spent) && (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground px-1">
               Spent records will disappear once the wallet confirms them.
               New records may take a few minutes to appear.
             </p>

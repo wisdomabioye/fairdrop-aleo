@@ -20,7 +20,7 @@ export function MyBidsPage() {
   }, [fetchRecords, publicKey]);
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="mx-auto max-w-2xl space-y-8 animate-fade-in">
       <PageHeader
         title="My Bids"
         description="View all your active bid records."
