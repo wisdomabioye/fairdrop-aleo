@@ -13,9 +13,7 @@ export function formatAmount(amount: bigint, decimals = 0): string {
 }
 
 export function formatField(field: string): string {
-  if (field.endsWith("field")) {
-    const val = field.replace("field", "");
-    if (val.length > 16) return `${val.slice(0, 8)}...${val.slice(-6)}field`;
-  }
-  return field;
+  const val = field.endsWith("field") ? field.slice(0, -5) : field;
+  if (val.length > 16) return `${val.slice(0, 8)}...${val.slice(-6)}`;
+  return val;
 }

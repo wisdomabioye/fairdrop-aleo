@@ -41,7 +41,7 @@ export function AuctionCard({ config, status, currentPrice }: Props) {
 
       <div className="flex items-center justify-between text-xs text-muted-foreground">
         <span>Floor: {config.floor_price.toLocaleString()}</span>
-        <span>Blocks: {config.start_block}\u2013{config.end_block}</span>
+        <span>Blocks: {config.start_block}–{config.end_block}</span>
       </div>
     </Link>
   );

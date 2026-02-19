@@ -44,7 +44,7 @@ export function PriceChart({ config, currentBlock, currentPrice }: Props) {
   if (points.length === 0) return null;
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-5 shadow-md-custom">
+    <div className="rounded-2xl border border-border bg-card p-5 shadow-md-custom h-full">
       <h4 className="mb-3 font-semibold text-foreground">Price Decay Curve</h4>
       <svg viewBox={viewBox} className="w-full" preserveAspectRatio="xMidYMid meet">
         <defs>

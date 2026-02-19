@@ -52,7 +52,7 @@ export function BidForm({ config, currentPrice, paymentRecords, onSuccess, onMar
   };
 
   return (
-    <Card variant="glass" className="animate-fade-in">
+    <Card variant="glass" className="animate-fade-in h-full">
       <h4 className="mb-4 font-semibold text-foreground">Place Bid</h4>
 
       <div className="space-y-4">

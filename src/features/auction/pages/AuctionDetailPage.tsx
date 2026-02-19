@@ -11,6 +11,7 @@ import { PriceChart } from "../components/PriceChart";
 import { BidForm } from "../components/BidForm";
 import { useAuction } from "../hooks/useAuction";
 import { useCurrentPrice } from "../hooks/useCurrentPrice";
+import { formatField } from "@/shared/lib/formatting";
 
 export function AuctionDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -53,7 +54,7 @@ export function AuctionDetailPage() {
         </div>
       </div>
 
-      <p className="font-mono text-sm text-muted-foreground">{config.auction_id}</p>
+      <p className="font-mono text-sm text-muted-foreground">{formatField(config.auction_id)}</p>
 
       {/* Countdown warning */}
       {isEndingSoon && (
@@ -64,25 +65,30 @@ export function AuctionDetailPage() {
         </div>
       )}
 
-      {/* Price Chart */}
-      <PriceChart config={config} currentBlock={blockHeight} currentPrice={price} />
+      {/* Chart + Bid Form — side by side on large screens, stacked on mobile */}
+      <div className={`grid grid-cols-1 gap-6 ${isActive && price !== null ? "lg:grid-cols-5" : ""}`}>
+        <div className={isActive && price !== null ? "lg:col-span-3" : ""}>
+          <PriceChart config={config} currentBlock={blockHeight} currentPrice={price} />
+        </div>
 
-      {/* Info Grid */}
+        {isActive && price !== null && (
+          <div className="lg:col-span-2">
+            <BidForm
+              config={config}
+              currentPrice={price}
+              paymentRecords={tokenRecords}
+              onSuccess={() => {
+                refetch();
+                fetchRecords();
+              }}
+              onMarkSpent={(id) => markSpent([id])}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Info Grid — full width below */}
       <AuctionInfo config={config} state={state} blockHeight={blockHeight} />
-
-      {/* Bid Form — shown when active */}
-      {isActive && price !== null && (
-        <BidForm
-          config={config}
-          currentPrice={price}
-          paymentRecords={tokenRecords}
-          onSuccess={() => {
-            refetch();
-            fetchRecords();
-          }}
-          onMarkSpent={(id) => markSpent([id])}
-        />
-      )}
     </div>
   );
 }
