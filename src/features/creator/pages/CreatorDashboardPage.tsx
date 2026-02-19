@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
 import {
   Transaction,
@@ -21,8 +22,10 @@ import { PROGRAM_ID, FEE } from "@/constants";
 export function CreatorDashboardPage() {
   const { publicKey, requestTransaction } = useWallet();
   const { blockHeight } = useBlockHeight();
-  const [auctionIdInput, setAuctionIdInput] = useState("");
-  const [auctionId, setAuctionId] = useState<string | undefined>();
+  const [searchParams] = useSearchParams();
+  const idFromUrl = searchParams.get("id") ?? "";
+  const [auctionIdInput, setAuctionIdInput] = useState(idFromUrl);
+  const [auctionId, setAuctionId] = useState<string | undefined>(idFromUrl || undefined);
   const { config, state, loading, error, refetch } = useAuction(auctionId);
 
   const [withdrawn, setWithdrawn] = useState(0n);
@@ -86,7 +89,7 @@ export function CreatorDashboardPage() {
     <div className="mx-auto max-w-2xl space-y-8 animate-fade-in">
       <PageHeader
         title="Creator Dashboard"
-        description="Manage your auctions \u2014 close, withdraw payments, recover unsold tokens."
+        description="Manage your auctions — close, withdraw payments, recover unsold tokens."
       />
 
       {/* Auction lookup */}
@@ -130,32 +133,45 @@ export function CreatorDashboardPage() {
           )}
 
           {/* Close Auction */}
-          {canClose && (
-            <Card padding="sm">
-              <h4 className="mb-3 font-semibold text-foreground">Close Auction</h4>
-              <p className="mb-4 text-sm text-muted-foreground">
-                {state.supply_met
-                  ? "Supply has been met. Close to set the clearing price."
-                  : "Auction has passed its end block. Close to finalize at floor price."}
+          <Card padding="sm">
+            <h4 className="mb-3 font-semibold text-foreground">Close Auction</h4>
+            {canClose ? (
+              <>
+                <p className="mb-4 text-sm text-muted-foreground">
+                  {state.supply_met
+                    ? "Supply has been met. Close to lock the clearing price."
+                    : "Auction has passed its end block. Close to finalize at floor price."}
+                </p>
+                <TransactionButton
+                  onClick={() => executeTx("close_auction", [config.auction_id], "close")}
+                  loading={txLoading === "close"}
+                  loadingText="Closing..."
+                  variant="accent"
+                >
+                  Close Auction
+                </TransactionButton>
+              </>
+            ) : state.cleared ? (
+              <p className="text-sm text-muted-foreground">
+                This auction has been closed. The clearing price is locked at{" "}
+                <span className="font-medium text-foreground">{state.clearing_price.toLocaleString()}</span>.
               </p>
-              <TransactionButton
-                onClick={() => executeTx("close_auction", [config.auction_id], "close")}
-                loading={txLoading === "close"}
-                loadingText="Closing..."
-                variant="accent"
-              >
-                Close Auction
-              </TransactionButton>
-            </Card>
-          )}
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                {status === "upcoming"
+                  ? `Closing is available once the auction starts at block ${config.start_block.toLocaleString()}.`
+                  : `Closing becomes available once supply is fully met or the auction passes block ${config.end_block.toLocaleString()}.`}
+              </p>
+            )}
+          </Card>
 
           {/* Withdraw Payments */}
-          {state.cleared && maxWithdrawable > 0n && (
-            <Card padding="sm">
+          <Card padding="sm">
+            <h4 className="mb-3 font-semibold text-foreground">Withdraw Payments</h4>
+            {state.cleared && maxWithdrawable > 0n ? (
               <div className="space-y-4">
-                <h4 className="font-semibold text-foreground">Withdraw Payments</h4>
                 <p className="text-sm text-muted-foreground">
-                  Max withdrawable: {maxWithdrawable.toLocaleString()}
+                  Max withdrawable: <span className="font-medium text-foreground">{maxWithdrawable.toLocaleString()}</span>
                 </p>
                 <Input
                   value={paymentAmount}
@@ -176,16 +192,24 @@ export function CreatorDashboardPage() {
                   Withdraw Payments
                 </TransactionButton>
               </div>
-            </Card>
-          )}
+            ) : state.cleared && maxWithdrawable === 0n ? (
+              <p className="text-sm text-muted-foreground">
+                All revenue has been withdrawn.
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Revenue becomes available to withdraw after the auction is closed and cleared.
+              </p>
+            )}
+          </Card>
 
           {/* Withdraw Unsold */}
-          {state.cleared && maxUnsold > 0n && (
-            <Card padding="sm">
+          <Card padding="sm">
+            <h4 className="mb-3 font-semibold text-foreground">Withdraw Unsold Tokens</h4>
+            {state.cleared && maxUnsold > 0n ? (
               <div className="space-y-4">
-                <h4 className="font-semibold text-foreground">Withdraw Unsold Tokens</h4>
                 <p className="text-sm text-muted-foreground">
-                  Unsold supply: {maxUnsold.toLocaleString()}
+                  Unsold supply: <span className="font-medium text-foreground">{maxUnsold.toLocaleString()}</span>
                 </p>
                 <Input
                   value={unsoldAmount}
@@ -206,8 +230,18 @@ export function CreatorDashboardPage() {
                   Withdraw Unsold
                 </TransactionButton>
               </div>
-            </Card>
-          )}
+            ) : state.cleared && maxUnsold === 0n ? (
+              <p className="text-sm text-muted-foreground">
+                {config.supply === state.total_committed
+                  ? "Supply was fully sold — no unsold tokens to recover."
+                  : "All unsold tokens have been withdrawn."}
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Unsold token recovery is available after the auction is closed.
+              </p>
+            )}
+          </Card>
 
           {txError && <p className="text-sm text-destructive">{txError}</p>}
           {txSuccess && (
