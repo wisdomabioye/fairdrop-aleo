@@ -51,7 +51,7 @@ const defaultForm: FormState = {
 export function CreateAuctionPage() {
   const navigate = useNavigate();
   const { blockHeight } = useBlockHeight();
-  const { tokenRecords, fetchRecords, markSpent } = useRecords();
+  const { tokenRecords, fetchRecords } = useRecords();
   const [saleTokenTypeId, setSaleTokenTypeId] = useLocalStorage("auction-draft-saleTokenType", "");
   const [form, setForm, clearDraft] = useLocalStorage<FormState>("auction-draft-form", defaultForm);
 
@@ -144,7 +144,6 @@ export function CreateAuctionPage() {
 
   const handleCreate = async () => {
     if (!selectedToken || validation) return;
-    const spentId = selectedToken.id;
     const txId = await execute("create_auction", [
       selectedToken._record,
       form.paymentTokenId,
@@ -158,7 +157,6 @@ export function CreateAuctionPage() {
       `${form.minBidAmount}u128`,
     ]);
     if (txId) {
-      markSpent([spentId]);
       clearDraft();
       setSaleTokenTypeId("");
       setSubmittedTxId(txId);

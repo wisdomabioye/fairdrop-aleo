@@ -18,7 +18,7 @@ export function AuctionDetailPage() {
   const { config, state, loading, error, refetch } = useAuction(id);
   const { blockHeight } = useBlockHeight();
   const { price, status: priceStatus } = useCurrentPrice(config, blockHeight);
-  const { tokenRecords, fetchRecords, markSpent } = useRecords();
+  const { tokenRecords, fetchRecords } = useRecords();
 
   const status = state?.cleared ? "cleared" : state?.supply_met ? "supply_met" : priceStatus;
   const isActive = status === "active" || status === "ending";
@@ -81,7 +81,6 @@ export function AuctionDetailPage() {
                 refetch();
                 fetchRecords();
               }}
-              onMarkSpent={(id) => markSpent([id])}
             />
           </div>
         )}

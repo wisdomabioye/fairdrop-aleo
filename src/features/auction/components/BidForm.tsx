@@ -12,10 +12,9 @@ interface Props {
   currentPrice: bigint;
   paymentRecords: TokenRecord[];
   onSuccess: () => void;
-  onMarkSpent?: (id: string) => void;
 }
 
-export function BidForm({ config, currentPrice, paymentRecords, onSuccess, onMarkSpent }: Props) {
+export function BidForm({ config, currentPrice, paymentRecords, onSuccess }: Props) {
   const [quantity, setQuantity] = useState("");
   const [selectedPayment, setSelectedPayment] = useState<TokenRecord | null>(null);
   const bidTx = useTransaction();
@@ -37,14 +36,12 @@ export function BidForm({ config, currentPrice, paymentRecords, onSuccess, onMar
 
   const handleBid = async () => {
     if (!selectedPayment || validation) return;
-    const spentId = selectedPayment.id;
     const txId = await bidTx.execute("place_bid", [
       selectedPayment._record,
       config.auction_id,
       `${quantity}u128`,
     ]);
     if (txId) {
-      onMarkSpent?.(spentId);
       setQuantity("");
       setSelectedPayment(null);
       onSuccess();

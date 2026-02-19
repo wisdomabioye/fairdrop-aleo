@@ -14,7 +14,7 @@ import type { BidRecord } from "@/shared/types/auction";
 
 export function ClaimPage() {
   const { publicKey } = useWallet();
-  const { bidRecords, fetchRecords, markSpent } = useRecords();
+  const { bidRecords, fetchRecords } = useRecords();
   const [selectedBid, setSelectedBid] = useState<BidRecord | null>(null);
   const [success, setSuccess] = useState(false);
   const claimTx = useTransaction();
@@ -37,7 +37,6 @@ export function ClaimPage() {
 
   const handleClaim = async () => {
     if (!selectedBid || !config || !state?.cleared) return;
-    const spentId = selectedBid.id;
     const txId = await claimTx.execute("claim", [
       selectedBid._record,
       `${state.clearing_price}u128`,
@@ -45,7 +44,6 @@ export function ClaimPage() {
       config.payment_token_id,
     ]);
     if (txId) {
-      markSpent([spentId]);
       setSuccess(true);
       setSelectedBid(null);
     }

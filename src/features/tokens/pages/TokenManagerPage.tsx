@@ -20,10 +20,9 @@ import { getTokenSymbol } from "@/constants";
 interface JoinTabProps {
   tokenRecords: TokenRecord[];
   onDone: (msg: string) => void;
-  onMarkSpent: (ids: string[]) => void;
 }
 
-function JoinTab({ tokenRecords, onDone, onMarkSpent }: JoinTabProps) {
+function JoinTab({ tokenRecords, onDone }: JoinTabProps) {
   const [joinA, setJoinA] = useState<TokenRecord | null>(null);
   const [joinB, setJoinB] = useState<TokenRecord | null>(null);
   const joinTx = useTransaction();
@@ -35,10 +34,8 @@ function JoinTab({ tokenRecords, onDone, onMarkSpent }: JoinTabProps) {
 
   const handleJoin = async () => {
     if (!joinA || !joinB) return;
-    const spentIds = [joinA.id, joinB.id];
     const txId = await joinTx.execute("join_tokens", [joinA._record, joinB._record]);
     if (txId) {
-      onMarkSpent(spentIds);
       onDone("Tokens joined successfully.");
       setJoinA(null);
       setJoinB(null);
@@ -146,20 +143,17 @@ function JoinTab({ tokenRecords, onDone, onMarkSpent }: JoinTabProps) {
 interface SplitTabProps {
   tokenRecords: TokenRecord[];
   onDone: (msg: string) => void;
-  onMarkSpent: (ids: string[]) => void;
 }
 
-function SplitTab({ tokenRecords, onDone, onMarkSpent }: SplitTabProps) {
+function SplitTab({ tokenRecords, onDone }: SplitTabProps) {
   const [splitToken, setSplitToken] = useState<TokenRecord | null>(null);
   const [splitAmount, setSplitAmount] = useState("");
   const splitTx = useTransaction();
 
   const handleSplit = async () => {
     if (!splitToken) return;
-    const spentId = splitToken.id;
     const txId = await splitTx.execute("split_token", [splitToken._record, `${splitAmount}u128`]);
     if (txId) {
-      onMarkSpent([spentId]);
       onDone("Token split successfully.");
       setSplitToken(null);
       setSplitAmount("");
@@ -269,7 +263,7 @@ type Tab = (typeof TABS)[number]["key"];
 
 export function TokenManagerPage() {
   const { publicKey } = useWallet();
-  const { tokenRecords, loading, fetchRecords, markSpent } = useRecords();
+  const { tokenRecords, loading, fetchRecords } = useRecords();
   const [tab, setTab] = useState<Tab>("join");
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -319,9 +313,9 @@ export function TokenManagerPage() {
             description="Your token records are private records encrypted to your address. Connect your wallet to join or split them."
           />
         ) : tab === "join" ? (
-          <JoinTab key="join" tokenRecords={tokenRecords} onDone={handleDone} onMarkSpent={markSpent} />
+          <JoinTab key="join" tokenRecords={tokenRecords} onDone={handleDone} />
         ) : (
-          <SplitTab key="split" tokenRecords={tokenRecords} onDone={handleDone} onMarkSpent={markSpent} />
+          <SplitTab key="split" tokenRecords={tokenRecords} onDone={handleDone} />
         )}
       </Card>
     </div>
