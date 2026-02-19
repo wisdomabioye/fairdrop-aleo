@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { Link } from "react-router-dom";
 import type { AuctionConfig, TokenRecord } from "@/shared/types/auction";
 import { useTransaction } from "@/shared/hooks/useTransaction";
 import { TokenRecordSelector } from "@/shared/components/RecordSelector";
@@ -18,6 +19,10 @@ export function BidForm({ config, currentPrice, paymentRecords, onSuccess }: Pro
   const [quantity, setQuantity] = useState("");
   const [selectedPayment, setSelectedPayment] = useState<TokenRecord | null>(null);
   const bidTx = useTransaction();
+
+  const hasPaymentRecords = paymentRecords.some(
+    (r) => r.token_id === config.payment_token_id && !r.spent,
+  );
 
   const totalCost = useMemo(() => {
     const qty = BigInt(quantity || "0");
@@ -67,6 +72,14 @@ export function BidForm({ config, currentPrice, paymentRecords, onSuccess }: Pro
           label="Payment Record"
           filterTokenId={config.payment_token_id}
         />
+        {!hasPaymentRecords && (
+          <p className="text-xs text-muted-foreground">
+            No payment tokens?{" "}
+            <Link to="/faucet" className="text-primary hover:underline">
+              Mint some from the faucet.
+            </Link>
+          </p>
+        )}
 
         {quantity && BigInt(quantity || "0") > 0n && (
           <div className="rounded-xl bg-secondary p-4">

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { CheckCircle2 } from "lucide-react";
 import { useBlockHeight } from "@/shared/hooks/useBlockHeight";
 import { useRecords } from "@/shared/hooks/useRecords";
@@ -238,13 +238,23 @@ export function CreateAuctionPage() {
             hint="The token you are auctioning off"
           />
           {saleTokenTypeId && (
-            <TokenRecordSelector
-              records={tokenRecords}
-              selected={selectedToken}
-              onSelect={setSelectedToken}
-              label="Sale Token Record (deposited into escrow)"
-              filterTokenId={saleTokenTypeId}
-            />
+            <>
+              <TokenRecordSelector
+                records={tokenRecords}
+                selected={selectedToken}
+                onSelect={setSelectedToken}
+                label="Sale Token Record (deposited into escrow)"
+                filterTokenId={saleTokenTypeId}
+              />
+              {!tokenRecords.some((r) => r.token_id === saleTokenTypeId && !r.spent) && (
+                <p className="text-xs text-muted-foreground">
+                  No records for this token?{" "}
+                  <Link to="/faucet" className="text-primary hover:underline">
+                    Mint some from the faucet.
+                  </Link>
+                </p>
+              )}
+            </>
           )}
 
           <Select
