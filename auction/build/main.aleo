@@ -79,6 +79,10 @@ mapping stats:
     key as field.public;
     value as Stats.public;
 
+mapping auction_index:
+    key as u64.public;
+    value as field.public;
+
 function create_token:
     input r0 as address.private;
     input r1 as field.private;
@@ -169,6 +173,7 @@ finalize create_auction:
     cast 0u128 0u128 false 0u32 false 0u128 0u128 into r29 as AuctionState;
     set r29 into auction_states[r27];
     set r2 into escrow_sales[r27];
+    set r27 into auction_index[r25.total_auctions];
     add r25.total_auctions 1u64 into r30;
     cast r30 r25.total_bids into r31 as Stats;
     set r31 into stats[0field];

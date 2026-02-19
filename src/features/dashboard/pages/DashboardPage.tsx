@@ -1,17 +1,16 @@
-import { useState, useCallback, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { useAuction } from "@/features/auction/hooks/useAuction";
+import { RefreshCw } from "lucide-react";
+import { useAuctions } from "@/features/auction/hooks/useAuctions";
 import { useCurrentPrice } from "@/features/auction/hooks/useCurrentPrice";
 import { AuctionCard } from "@/features/auction/components/AuctionCard";
 import { useBlockHeight } from "@/shared/hooks/useBlockHeight";
-import { getStats } from "@/shared/lib/mappings";
-import { parseStats, type Stats } from "@/shared/types/auction";
 import { Card } from "@/shared/components/ui/Card";
 import { Button } from "@/shared/components/ui/Button";
-import { Input } from "@/shared/components/ui/Input";
+import { Spinner } from "@/shared/components/ui/Spinner";
 import { PageHeader } from "@/shared/components/ui/PageHeader";
+import type { AuctionEntry } from "@/features/auction/hooks/useAuctions";
 
-function StatCard({ label, value, delay }: { label: string; value: string; delay: string }) {
+function StatCard({ label, value }: { label: string; value: string }) {
   return (
     <Card variant="glass" padding="sm" className="animate-fade-in">
       <p className="text-sm text-muted-foreground">{label}</p>
@@ -20,35 +19,20 @@ function StatCard({ label, value, delay }: { label: string; value: string; delay
   );
 }
 
-function AuctionResult({ auctionId, blockHeight }: { auctionId: string; blockHeight: number }) {
-  const { config, state } = useAuction(auctionId);
-  const { price, status: priceStatus } = useCurrentPrice(config, blockHeight);
+function AuctionItem({ entry, blockHeight }: { entry: AuctionEntry; blockHeight: number }) {
+  const { price, status: priceStatus } = useCurrentPrice(entry.config, blockHeight);
+  const status = entry.state?.cleared
+    ? "cleared"
+    : entry.state?.supply_met
+    ? "supply_met"
+    : priceStatus;
 
-  const status = state?.cleared ? "cleared" : state?.supply_met ? "supply_met" : priceStatus;
-
-  if (!config) return null;
-
-  return <AuctionCard config={config} status={status} currentPrice={price} />;
+  return <AuctionCard config={entry.config} status={status} currentPrice={price} />;
 }
 
 export function DashboardPage() {
   const { blockHeight } = useBlockHeight();
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [searchId, setSearchId] = useState("");
-  const [searchedIds, setSearchedIds] = useState<string[]>([]);
-
-  useEffect(() => {
-    getStats().then((raw) => {
-      if (raw) setStats(parseStats(raw));
-    });
-  }, []);
-
-  const handleSearch = useCallback(() => {
-    const id = searchId.trim();
-    if (id && !searchedIds.includes(id)) {
-      setSearchedIds((prev) => [id, ...prev]);
-    }
-  }, [searchId, searchedIds]);
+  const { auctions, total, loading, error, refetch } = useAuctions({ limit: 50 });
 
   return (
     <div className="space-y-10">
@@ -66,40 +50,61 @@ export function DashboardPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard label="Total Auctions" value={stats?.total_auctions.toLocaleString() ?? "\u2014"} delay="0ms" />
-        <StatCard label="Total Bids" value={stats?.total_bids.toLocaleString() ?? "\u2014"} delay="100ms" />
-        <StatCard label="Current Block" value={blockHeight > 0 ? blockHeight.toLocaleString() : "\u2014"} delay="200ms" />
+        <StatCard label="Total Auctions" value={total?.toLocaleString() ?? "—"} />
+        <StatCard label="Loaded" value={loading ? "…" : auctions.length.toLocaleString()} />
+        <StatCard label="Current Block" value={blockHeight > 0 ? blockHeight.toLocaleString() : "—"} />
       </div>
 
-      {/* Search */}
+      {/* Auction list */}
       <div>
-        <h3 className="mb-4 text-lg font-semibold text-foreground">Look Up Auction</h3>
-        <div className="flex gap-3">
-          <div className="flex-1">
-            <Input
-              value={searchId}
-              onChange={(e) => setSearchId(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              placeholder="Enter auction ID (e.g. 123field)"
-            />
-          </div>
-          <Button onClick={handleSearch} size="lg">
-            Search
-          </Button>
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-foreground">
+            All Auctions
+            {total !== null && total > 0 && (
+              <span className="ml-2 text-sm font-normal text-muted-foreground">
+                ({total.toLocaleString()} total)
+              </span>
+            )}
+          </h3>
+          <button
+            onClick={refetch}
+            disabled={loading}
+            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+            Refresh
+          </button>
         </div>
-      </div>
 
-      {/* Results */}
-      {searchedIds.length > 0 && (
-        <div>
-          <h3 className="mb-4 text-lg font-semibold text-foreground">Results</h3>
+        {loading && auctions.length === 0 && <Spinner center size="lg" />}
+
+        {error && <p className="text-sm text-destructive">{error}</p>}
+
+        {!loading && auctions.length === 0 && !error && (
+          <Card className="py-12 text-center">
+            <p className="font-medium text-foreground">No auctions yet</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Be the first to{" "}
+              <Link to="/auction/new" className="text-primary hover:underline">
+                create an auction
+              </Link>
+              .
+            </p>
+          </Card>
+        )}
+
+        {auctions.length > 0 && (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {searchedIds.map((id) => (
-              <AuctionResult key={id} auctionId={id} blockHeight={blockHeight} />
+            {auctions.map((entry) => (
+              <AuctionItem
+                key={entry.config.auction_id}
+                entry={entry}
+                blockHeight={blockHeight}
+              />
             ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

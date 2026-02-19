@@ -30,6 +30,11 @@ export async function getStats(): Promise<string | null> {
   return getMappingValue("stats", "0field");
 }
 
+/** Fetch the auction_id at position `index` in the global sequential index. */
+export async function getAuctionIndex(index: number): Promise<string | null> {
+  return getMappingValue("auction_index", `${index}u64`);
+}
+
 export async function getEscrowSales(auctionId: string): Promise<string | null> {
   return getMappingValue("escrow_sales", auctionId);
 }

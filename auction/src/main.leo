@@ -106,6 +106,11 @@ program fairdrop.aleo {
     // Global stats, keyed by 0field (singleton).
     mapping stats: field => Stats;
 
+    // Sequential index for auction discovery: index → auction_id.
+    // Enables enumeration without knowing IDs in advance.
+    // Key = total_auctions value at creation time (0-based sequential u64).
+    mapping auction_index: u64 => field;
+
     // =========================================================================
     // 1. Token Helpers
     // =========================================================================
@@ -236,6 +241,9 @@ program fairdrop.aleo {
 
         // Lock sale tokens in escrow.
         escrow_sales.set(auction_id, supply);
+
+        // Register auction in the sequential index for discovery.
+        auction_index.set(current_stats.total_auctions, auction_id);
 
         // Increment auction counter.
         stats.set(0field, Stats {
