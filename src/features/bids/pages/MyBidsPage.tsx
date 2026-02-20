@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
 import { useRecords } from "@/shared/hooks/useRecords";
@@ -13,7 +14,10 @@ import { formatField } from "@/shared/lib/formatting";
 export function MyBidsPage() {
   const { publicKey } = useWallet();
   const { bidRecords, loading, fetchRecords } = useRecords();
+  const [showSpent, setShowSpent] = useState(false);
 
+  const unspent = bidRecords.filter((b) => !b.spent);
+  const spent   = bidRecords.filter((b) => b.spent);
 
   return (
     <div className="mx-auto max-w-2xl space-y-8 animate-fade-in">
@@ -53,29 +57,63 @@ export function MyBidsPage() {
       )}
 
       {publicKey && bidRecords.length > 0 && (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {bidRecords.map((bid, i) => (
-            <Card key={i}>
-              <div className="mb-3 flex items-center justify-between">
-                <Badge variant="info" dot>Bid</Badge>
-                <Link
-                  to={`/auction/${bid.auction_id}`}
-                  className="text-xs font-mono text-primary hover:underline"
-                >
-                  {formatField(bid.auction_id)}
-                </Link>
-              </div>
-              <DataRow label="Quantity" value={bid.quantity.toLocaleString()} />
-              <DataRow label="Payment Locked" value={bid.payment_amount.toLocaleString()} />
-              <div className="mt-3">
-                <Link to="/claim">
-                  <Button variant="success" size="sm" className="w-full">
-                    Go to Claim
-                  </Button>
-                </Link>
-              </div>
-            </Card>
-          ))}
+        <div className="space-y-4">
+          {/* Active (unspent) bids */}
+          {unspent.length > 0 && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {unspent.map((bid, i) => (
+                <Card key={i}>
+                  <div className="mb-3 flex items-center justify-between">
+                    <Badge variant="info" dot>Bid</Badge>
+                    <Link
+                      to={`/auction/${bid.auction_id}`}
+                      className="text-xs font-mono text-primary hover:underline"
+                    >
+                      {formatField(bid.auction_id)}
+                    </Link>
+                  </div>
+                  <DataRow label="Quantity" value={bid.quantity.toLocaleString()} />
+                  <DataRow label="Payment Locked" value={bid.payment_amount.toLocaleString()} />
+                  <div className="mt-3">
+                    <Link to="/claim">
+                      <Button variant="success" size="sm" className="w-full">
+                        Go to Claim
+                      </Button>
+                    </Link>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {/* Spent/claimed bids — collapsed by default */}
+          {spent.length > 0 && (
+            <div className="space-y-3">
+              <button
+                onClick={() => setShowSpent((s) => !s)}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {spent.length} claimed bid{spent.length !== 1 ? "s" : ""} — {showSpent ? "hide" : "show"}
+              </button>
+
+              {showSpent && (
+                <div className="grid gap-4 sm:grid-cols-2 opacity-50">
+                  {spent.map((bid, i) => (
+                    <Card key={i}>
+                      <div className="mb-3 flex items-center justify-between">
+                        <Badge variant="muted">Claimed</Badge>
+                        <span className="text-xs font-mono text-muted-foreground">
+                          {formatField(bid.auction_id)}
+                        </span>
+                      </div>
+                      <DataRow label="Quantity" value={bid.quantity.toLocaleString()} />
+                      <DataRow label="Payment Locked" value={bid.payment_amount.toLocaleString()} />
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

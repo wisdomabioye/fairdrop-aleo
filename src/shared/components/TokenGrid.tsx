@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { TokenRecord } from "@/shared/types/auction";
 import { TokenCard } from "./TokenCard";
 
@@ -22,6 +23,7 @@ export function TokenGrid({
   filterTokenId,
   exclude = [],
 }: Props) {
+  const [showSpent, setShowSpent] = useState(false);
   const excludeSet = new Set(exclude.map((r) => r._raw));
 
   const filtered = records.filter((r) => {
@@ -30,7 +32,8 @@ export function TokenGrid({
     return true;
   });
 
-  const hasSpent = filtered.some((r) => r.spent);
+  const unspent = filtered.filter((r) => !r.spent);
+  const spent   = filtered.filter((r) => r.spent);
 
   return (
     <div>
@@ -40,26 +43,42 @@ export function TokenGrid({
         </p>
       )}
 
-      {filtered.length === 0 ? (
+      {unspent.length === 0 && spent.length === 0 ? (
         <p className="text-sm text-muted-foreground">{emptyText}</p>
       ) : (
         <div className="space-y-2">
-          <div className="grid gap-2 sm:grid-cols-2">
-            {filtered.map((record) => (
-              <TokenCard
-                key={record._raw}
-                record={record}
-                selected={selected?._raw === record._raw}
-                onSelect={record.spent ? undefined : () => onSelect(record)}
-              />
-            ))}
-          </div>
+          {unspent.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{emptyText}</p>
+          ) : (
+            <div className="grid gap-2 sm:grid-cols-2">
+              {unspent.map((record) => (
+                <TokenCard
+                  key={record._raw}
+                  record={record}
+                  selected={selected?._raw === record._raw}
+                  onSelect={() => onSelect(record)}
+                />
+              ))}
+            </div>
+          )}
 
-          {hasSpent && (
-            <p className="text-xs text-muted-foreground">
-              Spent records will disappear once the wallet confirms them on-chain.
-              New records from this transaction may take a few minutes to appear.
-            </p>
+          {spent.length > 0 && (
+            <div className="space-y-2">
+              <button
+                onClick={() => setShowSpent((s) => !s)}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {spent.length} spent record{spent.length !== 1 ? "s" : ""} — {showSpent ? "hide" : "show"}
+              </button>
+
+              {showSpent && (
+                <div className="grid gap-2 sm:grid-cols-2 opacity-50">
+                  {spent.map((record) => (
+                    <TokenCard key={record._raw} record={record} />
+                  ))}
+                </div>
+              )}
+            </div>
           )}
         </div>
       )}
