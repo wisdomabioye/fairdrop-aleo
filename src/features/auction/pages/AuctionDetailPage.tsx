@@ -14,7 +14,7 @@ import { formatField } from "@/shared/lib/formatting";
 
 export function AuctionDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { config, state, loading, error } = useAuction(id);
+  const { config, state, loading, error } = useAuction(id, { pollInterval: 15_000 });
   const { blockHeight } = useBlockHeight();
   const { price, status: priceStatus } = useCurrentPrice(config, blockHeight);
   const { tokenRecords } = useRecords();

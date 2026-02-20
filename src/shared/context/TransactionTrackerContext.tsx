@@ -8,7 +8,6 @@ import {
   type ReactNode,
 } from "react";
 import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
-import { NETWORK_URL, NETWORK } from "../../constants";
 import { useRefresh } from "./RefreshContext";
 
 export type TxStatus = "pending" | "confirmed" | "failed";
@@ -93,22 +92,7 @@ export function TransactionTrackerProvider({ children }: { children: ReactNode }
             // The Provable API may map the wallet UUID to the real transaction if submitted
             // through the same gateway; if not it returns 4xx and we skip gracefully.
             let aleoId: string | undefined;
-            try {
-              const res = await fetch(`${NETWORK_URL}/${NETWORK}/transaction/${txId}`);
-              if (res.ok) {
-                const data: unknown = await res.json();
-                if (
-                  data &&
-                  typeof data === "object" &&
-                  "id" in data &&
-                  typeof (data as { id: unknown }).id === "string" &&
-                  ((data as { id: string }).id).startsWith("at1")
-                ) {
-                  aleoId = (data as { id: string }).id;
-                }
-              }
-            } catch { /* RPC unreachable or UUID not supported — no hash */ }
-
+         
             confirmTx(txId, aleoId);
           } else if (s.includes("Failed") || s.includes("Rejected")) {
             failTx(txId);

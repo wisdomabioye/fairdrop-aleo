@@ -19,6 +19,7 @@
     "@demox-labs/aleo-wallet-adapter-react": "^0.0.22",
     "@demox-labs/aleo-wallet-adapter-reactui": "^0.0.36",
     "@provablehq/sdk": "^0.9.16",
+    "@puzzlehq/sdk": "^1.0.4",
     "@tailwindcss/vite": "^4.1.18",
     "comlink": "^4.4.2",
     "lucide-react": "^0.574.0",

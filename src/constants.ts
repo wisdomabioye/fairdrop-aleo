@@ -1,8 +1,8 @@
 export const PROGRAM_ID = "fairdrop.aleo";
-export const NETWORK_URL = "https://api.explorer.provable.com/v1";
+export const NETWORK_URL = "https://api.explorer.provable.com/v2";
 export const NETWORK = "testnetbeta";
 export const FEE = 100_000; // default fee in microcredits
-export const EXPLORER_TX_URL = "https://explorer.provable.com/transaction";
+export const EXPLORER_TX_URL = "https://testnet.explorer.provable.com/transaction";
 
 /** Human-readable labels for Aleo program function names */
 export const TX_LABELS: Record<string, string> = {
