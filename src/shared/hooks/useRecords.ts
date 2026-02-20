@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
 import { PROGRAM_ID } from "../../constants";
 import type { TokenRecord, BidRecord } from "../types/auction";
@@ -16,7 +16,7 @@ function parseBigInt(value: string): bigint {
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
-export function useRecords() {
+export function useRecords({ pollInterval }: { pollInterval?: number } = {}) {
   const { publicKey, requestRecords } = useWallet();
   const [tokenRecords, setTokenRecords] = useState<TokenRecord[]>([]);
   const [bidRecords, setBidRecords] = useState<BidRecord[]>([]);
@@ -72,6 +72,17 @@ export function useRecords() {
       setLoading(false);
     }
   }, [publicKey, requestRecords]);
+
+  useEffect(() => {
+    if (!publicKey || !pollInterval) return;
+    let timeout: ReturnType<typeof setTimeout>;
+    const poll = async () => {
+      await fetchRecords();
+      timeout = setTimeout(poll, pollInterval);
+    };
+    poll();
+    return () => clearTimeout(timeout);
+  }, [publicKey, pollInterval, fetchRecords]);
 
   return { tokenRecords, bidRecords, loading, fetchRecords };
 }

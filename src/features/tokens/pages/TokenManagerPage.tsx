@@ -263,11 +263,10 @@ type Tab = (typeof TABS)[number]["key"];
 
 export function TokenManagerPage() {
   const { publicKey } = useWallet();
-  const { tokenRecords, loading, fetchRecords } = useRecords();
+  const { tokenRecords, loading, fetchRecords } = useRecords({ pollInterval: 10_000 });
   const [tab, setTab] = useState<Tab>("join");
   const [success, setSuccess] = useState<string | null>(null);
 
-  useEffect(() => { if (publicKey) fetchRecords(); }, [fetchRecords, publicKey]);
 
   const handleDone = (msg: string) => {
     setSuccess(msg);
