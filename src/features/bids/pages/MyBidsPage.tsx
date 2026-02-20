@@ -46,6 +46,9 @@ export function MyBidsPage() {
           <p className="mt-2 text-sm text-muted-foreground">
             Place a bid on an auction to see it here.
           </p>
+          <p className="mt-3 rounded-lg bg-warning/10 px-3 py-2 text-xs text-warning">
+            Already placed a bid? Open the Leo wallet → ⚙ → Advanced → <span className="font-semibold">Upgrade Records</span> to force a resync.
+          </p>
         </Card>
       )}
 

@@ -105,7 +105,12 @@ export function BidRecordSelector({
     <div>
       <label className="mb-2 block text-sm font-medium text-foreground">{label}</label>
       {filtered.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No matching bid records found.</p>
+        <div className="space-y-2">
+          <p className="text-sm text-muted-foreground">No matching bid records found.</p>
+          <p className="rounded-lg bg-warning/10 px-3 py-2 text-xs text-warning">
+            Already placed a bid? Open the Leo wallet → ⚙ → Advanced → <span className="font-semibold">Upgrade Records</span> to force a resync.
+          </p>
+        </div>
       ) : (
         <div className="max-h-52 overflow-y-auto rounded-xl pr-0.5 space-y-2">
           {filtered.map((record) => {
