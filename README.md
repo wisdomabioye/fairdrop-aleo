@@ -4,6 +4,21 @@ A privacy-preserving descending-price auction on Aleo. Every participant pays th
 
 ---
 
+## Contents
+
+1. [The Problem](#the-problem)
+2. [How Fairdrop Works](#how-fairdrop-works)
+3. [Why Aleo](#why-aleo)
+4. [Privacy Design: Token Requirements](#privacy-design-token-requirements)
+5. [The Net Effect](#the-net-effect)
+6. [Architecture](#architecture)
+7. [Project Structure](#project-structure)
+8. [Development](#development)
+9. [Roadmap](#roadmap)
+10. [Known Challenges](#known-challenges)
+
+---
+
 ## The Problem
 
 Token launches, NFT drops, and asset sales on transparent blockchains are structurally unfair. Transparency, usually a virtue, becomes a weapon:
