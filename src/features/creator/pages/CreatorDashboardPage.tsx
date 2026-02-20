@@ -26,7 +26,7 @@ export function CreatorDashboardPage() {
   const idFromUrl = searchParams.get("id") ?? "";
   const [auctionIdInput, setAuctionIdInput] = useState(idFromUrl);
   const [auctionId, setAuctionId] = useState<string | undefined>(idFromUrl || undefined);
-  const { config, state, loading, error, refetch } = useAuction(auctionId);
+  const { config, state, loading, error } = useAuction(auctionId);
 
   const [withdrawn, setWithdrawn] = useState(0n);
   const [unsoldWithdrawn, setUnsoldWithdrawn] = useState(0n);
@@ -77,7 +77,6 @@ export function CreatorDashboardPage() {
       );
       await requestTransaction(tx);
       setTxSuccess(label);
-      refetch();
     } catch (e) {
       setTxError(e instanceof Error ? e.message : "Transaction failed");
     } finally {

@@ -4,11 +4,13 @@ import { Sidebar } from "./shared/components/Sidebar";
 import { TopBar } from "./shared/components/TopBar";
 import { TransactionTracker } from "./shared/components/TransactionTracker";
 import { TransactionTrackerProvider } from "./shared/context/TransactionTrackerContext";
+import { RefreshProvider } from "./shared/context/RefreshContext";
 
 export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
+    <RefreshProvider>
     <TransactionTrackerProvider>
       <div className="flex h-screen bg-background text-foreground">
         <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -32,5 +34,6 @@ export default function App() {
       {/* Fixed transaction status widget — visible across all pages */}
       <TransactionTracker />
     </TransactionTrackerProvider>
+    </RefreshProvider>
   );
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
 import { useRecords } from "@/shared/hooks/useRecords";
 import { useTransaction } from "@/shared/hooks/useTransaction";
@@ -14,14 +14,13 @@ import type { BidRecord } from "@/shared/types/auction";
 
 export function ClaimPage() {
   const { publicKey } = useWallet();
-  const { bidRecords, fetchRecords } = useRecords();
+  const { bidRecords } = useRecords();
   const [selectedBid, setSelectedBid] = useState<BidRecord | null>(null);
   const [success, setSuccess] = useState(false);
   const claimTx = useTransaction();
 
   const { config, state } = useAuction(selectedBid?.auction_id);
 
-  useEffect(() => { if (publicKey) fetchRecords(); }, [fetchRecords, publicKey]);
 
   const breakdown = useMemo(() => {
     if (!selectedBid || !state?.cleared) return null;

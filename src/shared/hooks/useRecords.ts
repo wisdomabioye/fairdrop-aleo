@@ -1,8 +1,9 @@
 import { useState, useCallback, useEffect } from "react";
 import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
-import { PROGRAM_ID } from "../../constants";
+import { PROGRAM_ID } from "@/constants";
 import type { TokenRecord, BidRecord } from "../types/auction";
 import { isWalletRecord } from "../types/wallet";
+import { useRefresh } from "../context/RefreshContext";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -16,8 +17,15 @@ function parseBigInt(value: string): bigint {
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
-export function useRecords({ pollInterval }: { pollInterval?: number } = {}) {
+export function useRecords({
+  pollInterval,
+  fetchOnMount = true,
+}: {
+  pollInterval?: number;
+  fetchOnMount?: boolean;
+} = {}) {
   const { publicKey, requestRecords } = useWallet();
+  const { recordsRevision } = useRefresh();
   const [tokenRecords, setTokenRecords] = useState<TokenRecord[]>([]);
   const [bidRecords, setBidRecords] = useState<BidRecord[]>([]);
   const [loading, setLoading] = useState(false);
@@ -73,6 +81,18 @@ export function useRecords({ pollInterval }: { pollInterval?: number } = {}) {
     }
   }, [publicKey, requestRecords]);
 
+  // Explicit mount fetch
+  useEffect(() => {
+    if (publicKey && fetchOnMount) fetchRecords();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [publicKey]);
+
+  // Re-fetch on global refresh signal (skip revision 0 — that's the mount)
+  useEffect(() => {
+    if (publicKey && recordsRevision > 0) fetchRecords();
+  }, [recordsRevision, publicKey, fetchRecords]);
+
+  // Polling — waits for each fetch to finish before scheduling the next
   useEffect(() => {
     if (!publicKey || !pollInterval) return;
     let timeout: ReturnType<typeof setTimeout>;

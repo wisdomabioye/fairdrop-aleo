@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
 import { useRecords } from "@/shared/hooks/useRecords";
 import { useTransaction } from "@/shared/hooks/useTransaction";
@@ -270,7 +270,6 @@ export function TokenManagerPage() {
 
   const handleDone = (msg: string) => {
     setSuccess(msg);
-    fetchRecords();
   };
 
   const handleTabChange = (next: Tab) => {

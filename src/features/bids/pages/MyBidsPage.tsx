@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
 import { useRecords } from "@/shared/hooks/useRecords";
@@ -15,9 +14,6 @@ export function MyBidsPage() {
   const { publicKey } = useWallet();
   const { bidRecords, loading, fetchRecords } = useRecords();
 
-  useEffect(() => {
-    if (publicKey) fetchRecords();
-  }, [fetchRecords, publicKey]);
 
   return (
     <div className="mx-auto max-w-2xl space-y-8 animate-fade-in">

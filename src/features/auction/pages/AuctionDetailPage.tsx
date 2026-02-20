@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useBlockHeight } from "@/shared/hooks/useBlockHeight";
 import { useRecords } from "@/shared/hooks/useRecords";
@@ -15,19 +14,16 @@ import { formatField } from "@/shared/lib/formatting";
 
 export function AuctionDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { config, state, loading, error, refetch } = useAuction(id);
+  const { config, state, loading, error } = useAuction(id);
   const { blockHeight } = useBlockHeight();
   const { price, status: priceStatus } = useCurrentPrice(config, blockHeight);
-  const { tokenRecords, fetchRecords } = useRecords();
+  const { tokenRecords } = useRecords();
 
   const status = state?.cleared ? "cleared" : state?.supply_met ? "supply_met" : priceStatus;
   const isActive = status === "active" || status === "ending";
   const blocksRemaining = config ? config.end_block - blockHeight : 0;
   const isEndingSoon = isActive && blocksRemaining > 0 && blocksRemaining < 100;
 
-  useEffect(() => {
-    fetchRecords();
-  }, [fetchRecords]);
 
   if (loading) {
     return <Spinner center size="lg" />;
@@ -77,10 +73,6 @@ export function AuctionDetailPage() {
               config={config}
               currentPrice={price}
               paymentRecords={tokenRecords}
-              onSuccess={() => {
-                refetch();
-                fetchRecords();
-              }}
             />
           </div>
         )}

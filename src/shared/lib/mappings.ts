@@ -1,4 +1,4 @@
-import { PROGRAM_ID } from "../../constants";
+import { PROGRAM_ID } from "@/constants";
 import { getNetworkClient } from "./networkClient";
 
 export async function getMappingValue(

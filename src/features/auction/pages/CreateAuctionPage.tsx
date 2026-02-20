@@ -51,7 +51,7 @@ const defaultForm: FormState = {
 export function CreateAuctionPage() {
   const navigate = useNavigate();
   const { blockHeight } = useBlockHeight();
-  const { tokenRecords, fetchRecords } = useRecords();
+  const { tokenRecords } = useRecords();
   const [saleTokenTypeId, setSaleTokenTypeId] = useLocalStorage("auction-draft-saleTokenType", "");
   const [form, setForm, clearDraft] = useLocalStorage<FormState>("auction-draft-form", defaultForm);
 
@@ -61,8 +61,6 @@ export function CreateAuctionPage() {
   const [submittedTxId, setSubmittedTxId] = useState<string | null>(null);
 
   const { execute, loading, status, error } = useTransaction();
-
-  useEffect(() => { fetchRecords(); }, [fetchRecords]);
 
   // Always keep startBlock at blockHeight + 50 unless the user has edited it
   useEffect(() => {

@@ -6,8 +6,10 @@ import {
   type AuctionConfig,
   type AuctionState,
 } from "@/shared/types/auction";
+import { useRefresh } from "@/shared/context/RefreshContext";
 
 export function useAuction(auctionId: string | undefined) {
+  const { auctionsRevision } = useRefresh();
   const [config, setConfig] = useState<AuctionConfig | null>(null);
   const [state, setState] = useState<AuctionState | null>(null);
   const [loading, setLoading] = useState(false);
@@ -41,7 +43,7 @@ export function useAuction(auctionId: string | undefined) {
 
   useEffect(() => {
     fetch();
-  }, [fetch]);
+  }, [fetch, auctionsRevision]);
 
   return { config, state, loading, error, refetch: fetch };
 }

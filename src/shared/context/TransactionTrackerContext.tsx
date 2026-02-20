@@ -9,6 +9,7 @@ import {
 } from "react";
 import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
 import { NETWORK_URL, NETWORK } from "../../constants";
+import { useRefresh } from "./RefreshContext";
 
 export type TxStatus = "pending" | "confirmed" | "failed";
 
@@ -41,6 +42,7 @@ const MAX_POLL_ATTEMPTS = 72; // 72 × 5 s ≈ 6 min before marking failed
 export function TransactionTrackerProvider({ children }: { children: ReactNode }) {
   // transactionStatus is the wallet-native status checker — accepts UUIDs correctly
   const { transactionStatus } = useWallet();
+  const { refreshAll } = useRefresh();
 
   const [transactions, setTransactions] = useState<TrackedTx[]>([]);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -56,7 +58,8 @@ export function TransactionTrackerProvider({ children }: { children: ReactNode }
       )
     );
     attemptsRef.current.delete(txId);
-  }, []);
+    refreshAll();
+  }, [refreshAll]);
 
   const failTx = useCallback((txId: string) => {
     setTransactions((prev) =>
