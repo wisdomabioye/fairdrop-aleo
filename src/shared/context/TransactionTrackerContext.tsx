@@ -88,7 +88,7 @@ export function TransactionTrackerProvider({ children }: { children: ReactNode }
           const result = await transactionStatus(txId);
           const s = typeof result === "string" ? result : String(result);
 
-          if (s.includes("Finalized") || s.includes("Confirmed")) {
+          if (s.includes("Finalized") || s.includes("Confirmed") || s.includes("Accepted") || s.includes("Completed")) {
             // Attempt to resolve the actual on-chain Aleo hash (at1…) for the explorer link.
             // The Provable API may map the wallet UUID to the real transaction if submitted
             // through the same gateway; if not it returns 4xx and we skip gracefully.

@@ -75,7 +75,10 @@ export function useRecords({
       setTokenRecords(tokens);
       setBidRecords(bids);
     } catch (e) {
-      console.error("Failed to fetch records:", e);
+      // WalletNotConnectedError is expected after transaction submission (transient state) — suppress it
+      if (!(e instanceof Error && e.name === "WalletNotConnectedError")) {
+        console.error("Failed to fetch records:", e);
+      }
     } finally {
       setLoading(false);
     }

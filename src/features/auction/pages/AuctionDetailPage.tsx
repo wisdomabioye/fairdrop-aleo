@@ -25,7 +25,7 @@ export function AuctionDetailPage() {
   const isEndingSoon = isActive && blocksRemaining > 0 && blocksRemaining < 100;
 
 
-  if (loading) {
+  if (loading && !config) {
     return <Spinner center size="lg" />;
   }
 

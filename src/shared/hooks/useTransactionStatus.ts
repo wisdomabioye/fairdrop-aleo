@@ -21,7 +21,7 @@ export function useTransactionStatus() {
         try {
           const result = await transactionStatus(id);
           const s = typeof result === "string" ? result : String(result);
-          if (s.includes("Finalized") || s.includes("Confirmed")) {
+          if (s.includes("Finalized") || s.includes("Confirmed") || s.includes("Accepted") || s.includes("Completed")) {
             setStatus("confirmed");
             if (intervalRef.current) clearInterval(intervalRef.current);
           } else if (s.includes("Failed") || s.includes("Rejected")) {

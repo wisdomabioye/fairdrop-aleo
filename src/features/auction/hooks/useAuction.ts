@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { getAuctionConfig, getAuctionState } from "@/shared/lib/mappings";
 import {
   parseAuctionConfig,
@@ -14,10 +14,12 @@ export function useAuction(auctionId: string | undefined) {
   const [state, setState] = useState<AuctionState | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const hasDataRef = useRef(false);
 
   const fetch = useCallback(async () => {
     if (!auctionId) return;
-    setLoading(true);
+    // Only show loading spinner on first fetch — background re-fetches are silent
+    if (!hasDataRef.current) setLoading(true);
     setError(null);
 
     try {
@@ -31,6 +33,7 @@ export function useAuction(auctionId: string | undefined) {
         setConfig(null);
         setState(null);
       } else {
+        hasDataRef.current = true;
         setConfig(parseAuctionConfig(configRaw));
         setState(stateRaw ? parseAuctionState(stateRaw) : null);
       }
@@ -39,6 +42,11 @@ export function useAuction(auctionId: string | undefined) {
     } finally {
       setLoading(false);
     }
+  }, [auctionId]);
+
+  // Reset "has data" flag when switching to a different auction
+  useEffect(() => {
+    hasDataRef.current = false;
   }, [auctionId]);
 
   useEffect(() => {
