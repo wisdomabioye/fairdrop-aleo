@@ -31,10 +31,10 @@ export function TokenRecordSelector({
 
   const renderToken = (record: TokenRecord) => {
     const isSpent    = !!record.spent;
-    const isSelected = selected?._raw === record._raw;
+    const isSelected = selected?.id === record.id;
     return (
       <button
-        key={record._raw}
+        key={record.id}
         onClick={isSpent ? undefined : () => onSelect(record)}
         disabled={isSpent}
         className={[
@@ -133,10 +133,10 @@ export function BidRecordSelector({
 
   const renderBid = (record: BidRecord) => {
     const isSpent    = !!record.spent;
-    const isSelected = selected?._raw === record._raw;
+    const isSelected = selected?.id === record.id;
     return (
       <button
-        key={record._raw}
+        key={record.id}
         onClick={isSpent ? undefined : () => onSelect(record)}
         disabled={isSpent}
         className={[

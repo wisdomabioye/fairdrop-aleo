@@ -1,5 +1,5 @@
 import { Wallet } from "lucide-react";
-import { WalletMultiButton } from "@demox-labs/aleo-wallet-adapter-reactui";
+import { ConnectButton } from "@/shared/components/wallet/ConnectButton";
 
 interface ConnectWalletPromptProps {
   title?: string;
@@ -35,7 +35,7 @@ export function ConnectWalletPrompt({
       </div>
 
       {/* Action */}
-      <WalletMultiButton />
+      <ConnectButton />
     </div>
   );
 }

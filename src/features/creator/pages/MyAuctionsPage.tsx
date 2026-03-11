@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { RefreshCw } from "lucide-react";
-import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
+import { useWallet } from "@provablehq/aleo-wallet-adaptor-react";
 import { useUserAuctions } from "@/features/auction/hooks/useUserAuctions";
 import { ConnectWalletPrompt } from "@/shared/components/ConnectWalletPrompt";
 import { useCurrentPrice } from "@/features/auction/hooks/useCurrentPrice";
@@ -33,7 +33,7 @@ function AuctionItem({ entry, blockHeight }: { entry: AuctionEntry; blockHeight:
 }
 
 export function MyAuctionsPage() {
-  const { publicKey } = useWallet();
+  const { address } = useWallet();
   const { blockHeight } = useBlockHeight();
   const { auctions, count, loading, error, refetch } = useUserAuctions();
 
@@ -63,7 +63,7 @@ export function MyAuctionsPage() {
         }
       />
 
-      {!publicKey && (
+      {!address && (
         <Card>
           <ConnectWalletPrompt
             title="Connect to see your auctions"
@@ -72,11 +72,11 @@ export function MyAuctionsPage() {
         </Card>
       )}
 
-      {publicKey && loading && auctions.length === 0 && <Spinner center size="lg" />}
+      {address && loading && auctions.length === 0 && <Spinner center size="lg" />}
 
-      {publicKey && error && <p className="text-sm text-destructive">{error}</p>}
+      {address && error && <p className="text-sm text-destructive">{error}</p>}
 
-      {publicKey && !loading && auctions.length === 0 && !error && (
+      {address && !loading && auctions.length === 0 && !error && (
         <Card className="py-12 text-center">
           <p className="font-medium text-foreground">No auctions found</p>
           <p className="mt-1 text-sm text-muted-foreground">

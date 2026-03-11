@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
+import { useWallet } from "@provablehq/aleo-wallet-adaptor-react";
 import { useRecords } from "@/shared/hooks/useRecords";
 import { useTransaction } from "@/shared/hooks/useTransaction";
 import { ConnectWalletPrompt } from "@/shared/components/ConnectWalletPrompt";
@@ -262,7 +262,7 @@ const TABS = [
 type Tab = (typeof TABS)[number]["key"];
 
 export function TokenManagerPage() {
-  const { publicKey } = useWallet();
+  const { address } = useWallet();
   const { tokenRecords, loading, fetchRecords } = useRecords({ pollInterval: 10_000 });
   const [tab, setTab] = useState<Tab>("join");
   const [success, setSuccess] = useState<string | null>(null);
@@ -305,7 +305,7 @@ export function TokenManagerPage() {
       <Tabs tabs={TABS} active={tab} onChange={handleTabChange} />
 
       <Card>
-        {!publicKey ? (
+        {!address ? (
           <ConnectWalletPrompt
             title="Connect to manage tokens"
             description="Your token records are private records encrypted to your address. Connect your wallet to join or split them."

@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import type { AuctionConfig, AuctionStatus } from "@/shared/types/auction";
 import { StatusBadge } from "./StatusBadge";
-import { formatField } from "@/shared/lib/formatting";
+import { formatField } from "@/shared/utils/formatting";
 
 interface Props {
   config: AuctionConfig;

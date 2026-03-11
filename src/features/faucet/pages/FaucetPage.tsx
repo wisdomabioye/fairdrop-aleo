@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
+import { useWallet } from "@provablehq/aleo-wallet-adaptor-react";
 import { useTransaction } from "@/shared/hooks/useTransaction";
 import { TransactionButton } from "@/shared/components/TransactionButton";
 import { Card } from "@/shared/components/ui/Card";
@@ -15,7 +15,7 @@ const tokenOptions = TestTokens.map((t) => ({
 }));
 
 export function FaucetPage() {
-  const { publicKey } = useWallet();
+  const { address } = useWallet();
   const [recipient, setRecipient] = useState("");
   const [tokenId, setTokenId] = useState("");
   const [amount, setAmount] = useState("");
@@ -25,7 +25,7 @@ export function FaucetPage() {
     label: "Mint Tokens",
   });
 
-  const effectiveRecipient = recipient || publicKey || "";
+  const effectiveRecipient = recipient || address || "";
 
   const validation = (() => {
     if (!effectiveRecipient) return "Connect wallet or enter recipient";
@@ -54,7 +54,7 @@ export function FaucetPage() {
             label="Recipient"
             value={recipient}
             onChange={(e) => { setRecipient(e.target.value); clearError(); }}
-            placeholder={publicKey ? `Default: ${publicKey.slice(0, 12)}…` : "Connect wallet"}
+            placeholder={address ? `Default: ${address.slice(0, 12)}…` : "Connect wallet"}
             hint="Leave blank to mint to your connected wallet"
           />
 

@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
+import { useWallet } from "@provablehq/aleo-wallet-adaptor-react";
 import {
   getCreatorAuctionCount,
   getCreatorLatestAuction,
@@ -13,12 +13,8 @@ import {
   getCachedCreatorIds,
   cacheCreatorIds,
 } from "@/shared/lib/auctionConfigCache";
-import {
-  parseAuctionConfig,
-  parseAuctionState,
-  type AuctionConfig,
-  type AuctionState,
-} from "@/shared/types/auction";
+import { parseAuctionConfig, parseAuctionState } from "@/shared/lib/auctionParsers";
+import type { AuctionConfig, AuctionState } from "@/shared/types/auction";
 
 export interface AuctionEntry {
   config: AuctionConfig;
@@ -36,14 +32,14 @@ export interface AuctionEntry {
  *  4. Configs: cache-first. States: always fresh.
  */
 export function useUserAuctions() {
-  const { publicKey } = useWallet();
+  const { address } = useWallet();
   const [auctions, setAuctions] = useState<AuctionEntry[]>([]);
   const [count, setCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetch = useCallback(async () => {
-    if (!publicKey) {
+    if (!address) {
       setAuctions([]);
       setCount(null);
       return;
@@ -54,7 +50,7 @@ export function useUserAuctions() {
 
     try {
       // 1. Quick count — skip everything if zero
-      const k = await getCreatorAuctionCount(publicKey);
+      const k = await getCreatorAuctionCount(address);
       setCount(k);
       if (k === 0) {
         setAuctions([]);
@@ -64,18 +60,18 @@ export function useUserAuctions() {
       // 2. Use cached ID list if count matches — skip linked list traversal entirely.
       //    If count differs (new auction created), traverse to get updated list.
       let ids: string[];
-      const cachedIds = getCachedCreatorIds(publicKey);
+      const cachedIds = getCachedCreatorIds(address);
 
       if (cachedIds && cachedIds.length === k) {
         ids = cachedIds;
       } else {
         ids = [];
-        let cursor = await getCreatorLatestAuction(publicKey);
+        let cursor = await getCreatorLatestAuction(address);
         while (cursor && cursor !== "0field" && ids.length < k) {
           ids.push(cursor);
           cursor = await getAuctionPrevByCreator(cursor);
         }
-        cacheCreatorIds(publicKey, ids);
+        cacheCreatorIds(address, ids);
       }
 
       if (ids.length === 0) {
@@ -118,7 +114,7 @@ export function useUserAuctions() {
     } finally {
       setLoading(false);
     }
-  }, [publicKey]);
+  }, [address]);
 
   useEffect(() => {
     fetch();

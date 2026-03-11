@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
+import { useWallet } from "@provablehq/aleo-wallet-adaptor-react";
 import { useRecords } from "@/shared/hooks/useRecords";
 import { ConnectWalletPrompt } from "@/shared/components/ConnectWalletPrompt";
 import { Card } from "@/shared/components/ui/Card";
@@ -9,10 +9,10 @@ import { Badge } from "@/shared/components/ui/Badge";
 import { DataRow } from "@/shared/components/ui/DataRow";
 import { PageHeader } from "@/shared/components/ui/PageHeader";
 import { Spinner } from "@/shared/components/ui/Spinner";
-import { formatField } from "@/shared/lib/formatting";
+import { formatField } from "@/shared/utils/formatting";
 
 export function MyBidsPage() {
-  const { publicKey } = useWallet();
+  const { address } = useWallet();
   const { bidRecords, loading, fetchRecords } = useRecords();
   const [showSpent, setShowSpent] = useState(false);
 
@@ -25,7 +25,7 @@ export function MyBidsPage() {
         title="My Bids"
         description="View all your active bid records."
         action={
-          publicKey ? (
+          address ? (
             <Button variant="secondary" onClick={fetchRecords} disabled={loading}>
               {loading ? "Refreshing..." : "Refresh"}
             </Button>
@@ -33,7 +33,7 @@ export function MyBidsPage() {
         }
       />
 
-      {!publicKey && (
+      {!address && (
         <Card>
           <ConnectWalletPrompt
             title="Connect to see your bids"
@@ -42,9 +42,9 @@ export function MyBidsPage() {
         </Card>
       )}
 
-      {publicKey && loading && bidRecords.length === 0 && <Spinner center size="lg" />}
+      {address && loading && bidRecords.length === 0 && <Spinner center size="lg" />}
 
-      {publicKey && !loading && bidRecords.length === 0 && (
+      {address && !loading && bidRecords.length === 0 && (
         <Card className="text-center">
           <p className="text-muted-foreground">No bid records found.</p>
           <p className="mt-2 text-sm text-muted-foreground">
@@ -56,13 +56,13 @@ export function MyBidsPage() {
         </Card>
       )}
 
-      {publicKey && bidRecords.length > 0 && (
+      {address && bidRecords.length > 0 && (
         <div className="space-y-4">
           {/* Active (unspent) bids */}
           {unspent.length > 0 && (
             <div className="grid gap-4 sm:grid-cols-2">
-              {unspent.map((bid, i) => (
-                <Card key={i}>
+              {unspent.map((bid) => (
+                <Card key={bid.id}>
                   <div className="mb-3 flex items-center justify-between">
                     <Badge variant="info" dot>Bid</Badge>
                     <Link
@@ -98,8 +98,8 @@ export function MyBidsPage() {
 
               {showSpent && (
                 <div className="grid gap-4 sm:grid-cols-2 opacity-50">
-                  {spent.map((bid, i) => (
-                    <Card key={i}>
+                  {spent.map((bid) => (
+                    <Card key={bid.id}>
                       <div className="mb-3 flex items-center justify-between">
                         <Badge variant="muted">Claimed</Badge>
                         <span className="text-xs font-mono text-muted-foreground">

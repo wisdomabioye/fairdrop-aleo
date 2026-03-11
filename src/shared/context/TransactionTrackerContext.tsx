@@ -7,22 +7,18 @@ import {
   useRef,
   type ReactNode,
 } from "react";
-import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
+import { useWallet } from "@provablehq/aleo-wallet-adaptor-react";
+import { TransactionStatus } from "@provablehq/aleo-types";
 import { useRefresh } from "./RefreshContext";
 
 export type TxStatus = "pending" | "confirmed" | "failed";
 
 export interface TrackedTx {
-  /** Internal React key */
   id: string;
-  /** Wallet-internal UUID returned by requestTransaction */
+  /** Wallet-internal transaction ID returned by executeTransaction */
   txId: string;
-  /**
-   * Resolved on-chain Aleo transaction ID (at1…).
-   * Populated after confirmation if the RPC can map the wallet UUID to the real hash.
-   */
+  /** On-chain Aleo transaction ID (at1…) — available as soon as the wallet indexes it */
   aleoId?: string;
-  /** Human-readable label e.g. "Join Records" */
   label: string;
   status: TxStatus;
   timestamp: number;
@@ -39,16 +35,17 @@ const TransactionTrackerContext = createContext<ContextValue | null>(null);
 const MAX_POLL_ATTEMPTS = 72; // 72 × 5 s ≈ 6 min before marking failed
 
 export function TransactionTrackerProvider({ children }: { children: ReactNode }) {
-  // transactionStatus is the wallet-native status checker — accepts UUIDs correctly
   const { transactionStatus } = useWallet();
   const { refreshAll } = useRefresh();
 
   const [transactions, setTransactions] = useState<TrackedTx[]>([]);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const attemptsRef = useRef<Map<string, number>>(new Map());
-  // Stable ref so the interval callback always sees the latest list
+  // Stable refs so interval callbacks always see the latest values without re-creating pollPending
   const transactionsRef = useRef<TrackedTx[]>([]);
   transactionsRef.current = transactions;
+  const transactionStatusRef = useRef(transactionStatus);
+  transactionStatusRef.current = transactionStatus;
 
   const confirmTx = useCallback((txId: string, aleoId?: string) => {
     setTransactions((prev) =>
@@ -82,19 +79,24 @@ export function TransactionTrackerProvider({ children }: { children: ReactNode }
         }
 
         try {
-          if (!transactionStatus) return;
-          // Use the wallet's native status API — correctly handles UUID-format txIds
-          const result = await transactionStatus(txId);
-          const s = typeof result === "string" ? result : String(result);
+          const statusFn = transactionStatusRef.current;
+          if (!statusFn) return;
+          const result = await statusFn(txId);
+          const s = result.status.toLowerCase();
 
-          if (s.includes("Finalized") || s.includes("Confirmed") || s.includes("Accepted") || s.includes("Completed")) {
-            // Attempt to resolve the actual on-chain Aleo hash (at1…) for the explorer link.
-            // The Provable API may map the wallet UUID to the real transaction if submitted
-            // through the same gateway; if not it returns 4xx and we skip gracefully.
-            let aleoId: string | undefined;
-         
-            confirmTx(txId, aleoId);
-          } else if (s.includes("Failed") || s.includes("Rejected")) {
+          // Store the on-chain ID as soon as the wallet returns it (even while pending)
+          // so the explorer link appears in the widget immediately.
+          if (result.transactionId) {
+            setTransactions((prev) =>
+              prev.map((t) =>
+                t.txId === txId && !t.aleoId ? { ...t, aleoId: result.transactionId } : t
+              )
+            );
+          }
+
+          if (s === TransactionStatus.ACCEPTED) {
+            confirmTx(txId, result.transactionId);
+          } else if (s === TransactionStatus.FAILED || s === TransactionStatus.REJECTED) {
             failTx(txId);
           }
         } catch {
@@ -102,7 +104,7 @@ export function TransactionTrackerProvider({ children }: { children: ReactNode }
         }
       })
     );
-  }, [transactionStatus, confirmTx, failTx]);
+  }, [confirmTx, failTx]);
 
   // Start/stop polling based on whether there are pending transactions
   const hasPending = transactions.some((t) => t.status === "pending");

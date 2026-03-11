@@ -1,21 +1,10 @@
 import { useState, useCallback, useEffect } from "react";
-import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
+import { useWallet } from "@provablehq/aleo-wallet-adaptor-react";
 import { PROGRAM_ID } from "@/config/network";
-import type { TokenRecord, BidRecord } from "../types/auction";
-import { isWalletRecord } from "../types/wallet";
-import { useRefresh } from "../context/RefreshContext";
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function stripSuffix(value: string): string {
-  return value.replace(/\.(private|public)$/, "");
-}
-
-function parseBigInt(value: string): bigint {
-  return BigInt(stripSuffix(value).replace("u128", ""));
-}
-
-// ─── Hook ─────────────────────────────────────────────────────────────────────
+import type { TokenRecord, BidRecord } from "@/shared/types/auction";
+import { isWalletRecord } from "@/shared/types/wallet";
+import { parsePlaintext, parseU128, parseField } from "@/shared/utils/leo";
+import { useRefresh } from "@/shared/context/RefreshContext";
 
 export function useRecords({
   pollInterval,
@@ -24,49 +13,46 @@ export function useRecords({
   pollInterval?: number;
   fetchOnMount?: boolean;
 } = {}) {
-  const { publicKey, requestRecords } = useWallet();
+  const { address, requestRecords } = useWallet();
   const { recordsRevision } = useRefresh();
   const [tokenRecords, setTokenRecords] = useState<TokenRecord[]>([]);
   const [bidRecords, setBidRecords] = useState<BidRecord[]>([]);
   const [loading, setLoading] = useState(false);
 
   const fetchRecords = useCallback(async () => {
-    if (!publicKey || !requestRecords) return;
+    if (!address || !requestRecords) return;
     setLoading(true);
     try {
-      const entries = await requestRecords(PROGRAM_ID);
+      const entries = await requestRecords(PROGRAM_ID, true);
       const tokens: TokenRecord[] = [];
       const bids: BidRecord[] = [];
 
       for (const entry of entries) {
         if (!isWalletRecord(entry)) continue;
-        const { owner, data } = entry;
-        const raw = JSON.stringify(entry);
-        const recordInput: unknown = entry;
+
+        const fields = parsePlaintext(entry.recordPlaintext);
 
         if (entry.recordName === "Token") {
           try {
             tokens.push({
-              id: entry.id,
-              owner,
-              token_id: stripSuffix(data["token_id"] ?? ""),
-              amount: parseBigInt(data["amount"] ?? "0u128"),
-              spent: entry.spent,
-              _raw: raw,
-              _record: recordInput,
+              id:       entry.commitment,
+              owner:    parseField(fields["owner"]    ?? ""),
+              token_id: parseField(fields["token_id"] ?? ""),
+              amount:   parseU128(fields["amount"]    ?? "0u128"),
+              spent:    entry.spent,
+              _record:  entry.recordPlaintext,
             });
           } catch { /* skip malformed */ }
         } else if (entry.recordName === "Bid") {
           try {
             bids.push({
-              id: entry.id,
-              owner,
-              auction_id: stripSuffix(data["auction_id"] ?? ""),
-              quantity: parseBigInt(data["quantity"] ?? "0u128"),
-              payment_amount: parseBigInt(data["payment_amount"] ?? "0u128"),
-              spent: entry.spent,
-              _raw: raw,
-              _record: recordInput,
+              id:              entry.commitment,
+              owner:           parseField(fields["owner"]          ?? ""),
+              auction_id:      parseField(fields["auction_id"]     ?? ""),
+              quantity:        parseU128(fields["quantity"]        ?? "0u128"),
+              payment_amount:  parseU128(fields["payment_amount"]  ?? "0u128"),
+              spent:           entry.spent,
+              _record:         entry.recordPlaintext,
             });
           } catch { /* skip malformed */ }
         }
@@ -75,29 +61,29 @@ export function useRecords({
       setTokenRecords(tokens);
       setBidRecords(bids);
     } catch (e) {
-      // WalletNotConnectedError is expected after transaction submission (transient state) — suppress it
+      // WalletNotConnectedError is expected after transaction submission — suppress it
       if (!(e instanceof Error && e.name === "WalletNotConnectedError")) {
         console.error("Failed to fetch records:", e);
       }
     } finally {
       setLoading(false);
     }
-  }, [publicKey, requestRecords]);
+  }, [address, requestRecords]);
 
-  // Explicit mount fetch
+  // Fetch on mount
   useEffect(() => {
-    if (publicKey && fetchOnMount) fetchRecords();
+    if (address && fetchOnMount) fetchRecords();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [publicKey]);
+  }, [address]);
 
   // Re-fetch on global refresh signal (skip revision 0 — that's the mount)
   useEffect(() => {
-    if (publicKey && recordsRevision > 0) fetchRecords();
-  }, [recordsRevision, publicKey, fetchRecords]);
+    if (address && recordsRevision > 0) fetchRecords();
+  }, [recordsRevision, address, fetchRecords]);
 
   // Polling — waits for each fetch to finish before scheduling the next
   useEffect(() => {
-    if (!publicKey || !pollInterval) return;
+    if (!address || !pollInterval) return;
     let timeout: ReturnType<typeof setTimeout>;
     const poll = async () => {
       await fetchRecords();
@@ -105,7 +91,7 @@ export function useRecords({
     };
     poll();
     return () => clearTimeout(timeout);
-  }, [publicKey, pollInterval, fetchRecords]);
+  }, [address, pollInterval, fetchRecords]);
 
   return { tokenRecords, bidRecords, loading, fetchRecords };
 }

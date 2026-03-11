@@ -1,14 +1,7 @@
-import React, { useMemo } from "react";
+import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { WalletProvider } from "@demox-labs/aleo-wallet-adapter-react";
-import { WalletModalProvider } from "@demox-labs/aleo-wallet-adapter-reactui";
-import { LeoWalletAdapter } from "@demox-labs/aleo-wallet-adapter-leo";
-import {
-  DecryptPermission,
-  WalletAdapterNetwork,
-} from "@demox-labs/aleo-wallet-adapter-base";
-import "@demox-labs/aleo-wallet-adapter-reactui/styles.css";
+import { WalletAdaptorProvider } from "@/providers/WalletAdaptorProvider";
 import "./app.css";
 
 import App from "./App";
@@ -24,20 +17,9 @@ import { TokenManagerPage } from "./features/tokens/pages/TokenManagerPage";
 import { GuidePage } from "./features/guide/pages/GuidePage";
 
 function Root() {
-  const wallets = useMemo(
-    () => [new LeoWalletAdapter({ appName: "Fairdrop" })],
-    [],
-  );
-
   return (
-    <WalletProvider
-      wallets={wallets}
-      decryptPermission={DecryptPermission.AutoDecrypt}
-      network={WalletAdapterNetwork.TestnetBeta}
-      autoConnect
-    >
-      <WalletModalProvider>
-        <BrowserRouter>
+    <WalletAdaptorProvider>
+      <BrowserRouter>
           <Routes>
             <Route element={<App />}>
               <Route index element={<DashboardPage />} />
@@ -53,8 +35,7 @@ function Root() {
             </Route>
           </Routes>
         </BrowserRouter>
-      </WalletModalProvider>
-    </WalletProvider>
+    </WalletAdaptorProvider>
   );
 }
 

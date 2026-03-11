@@ -10,7 +10,7 @@ interface Props {
   emptyText?: string;
   /** When set, only records with this token_id are shown */
   filterTokenId?: string;
-  /** Records to exclude by _raw identity (e.g. already selected in another slot) */
+  /** Records to exclude by id (e.g. already selected in another slot) */
   exclude?: TokenRecord[];
 }
 
@@ -24,10 +24,10 @@ export function TokenGrid({
   exclude = [],
 }: Props) {
   const [showSpent, setShowSpent] = useState(false);
-  const excludeSet = new Set(exclude.map((r) => r._raw));
+  const excludeSet = new Set(exclude.map((r) => r.id));
 
   const filtered = records.filter((r) => {
-    if (excludeSet.has(r._raw)) return false;
+    if (excludeSet.has(r.id)) return false;
     if (filterTokenId && r.token_id !== filterTokenId) return false;
     return true;
   });
@@ -53,9 +53,9 @@ export function TokenGrid({
             <div className="grid gap-2 sm:grid-cols-2">
               {unspent.map((record) => (
                 <TokenCard
-                  key={record._raw}
+                  key={record.id}
                   record={record}
-                  selected={selected?._raw === record._raw}
+                  selected={selected?.id === record.id}
                   onSelect={() => onSelect(record)}
                 />
               ))}
@@ -74,7 +74,7 @@ export function TokenGrid({
               {showSpent && (
                 <div className="grid gap-2 sm:grid-cols-2 opacity-50">
                   {spent.map((record) => (
-                    <TokenCard key={record._raw} record={record} />
+                    <TokenCard key={record.id} record={record} />
                   ))}
                 </div>
               )}

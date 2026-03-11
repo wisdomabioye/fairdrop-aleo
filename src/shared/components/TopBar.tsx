@@ -1,6 +1,6 @@
 import { useLocation } from "react-router-dom";
 import { Menu, Sun, Moon } from "lucide-react";
-import { WalletMultiButton } from "@demox-labs/aleo-wallet-adapter-reactui";
+import { ConnectButton } from "@/shared/components/wallet/ConnectButton";
 import { useTheme } from "@/shared/hooks/useTheme";
 
 interface TopBarProps {
@@ -57,7 +57,7 @@ export function TopBar({ onMenuToggle }: TopBarProps) {
       </button>
 
       {/* Wallet */}
-      <WalletMultiButton />
+      <ConnectButton />
     </header>
   );
 }

@@ -1,12 +1,9 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
-import {
-  Transaction,
-  WalletAdapterNetwork,
-} from "@demox-labs/aleo-wallet-adapter-base";
+import { useWallet } from "@provablehq/aleo-wallet-adaptor-react";
 import { PROGRAM_ID, FEE } from "@/config/network";
 import { TX_LABELS } from "@/constants";
 import { useTransactionTracker } from "../context/TransactionTrackerContext";
+import type { ProgramFunction } from "@/constants";
 
 export type TxStatus = "idle" | "signing" | "submitted" | "error";
 
@@ -18,7 +15,7 @@ interface UseTransactionOptions {
 }
 
 export function useTransaction(options: UseTransactionOptions = {}) {
-  const { publicKey, requestTransaction } = useWallet();
+  const { address, executeTransaction } = useWallet();
   const { addTransaction } = useTransactionTracker();
 
   // Keep options accessible inside execute without adding them to its deps
@@ -38,25 +35,24 @@ export function useTransaction(options: UseTransactionOptions = {}) {
   }, [status]);
 
   const execute = useCallback(
-    async (functionName: string, inputs: unknown[]): Promise<string | null> => {
-      if (!publicKey || !requestTransaction) return null;
+    async (functionName: ProgramFunction, inputs: string[]): Promise<string | null> => {
+      if (!address || !executeTransaction) return null;
 
       setLoading(true);
       setStatus("signing");
       setError(null);
       setTxId(null);
       try {
-        const tx = Transaction.createTransaction(
-          publicKey,
-          WalletAdapterNetwork.TestnetBeta,
-          PROGRAM_ID,
-          functionName,
+        const result = await executeTransaction({
+          program: PROGRAM_ID,
+          function: functionName,
           inputs,
-          FEE,
-          optionsRef.current.privateFee ?? false,
-        );
+          fee: FEE,
+          privateFee: optionsRef.current.privateFee ?? false,
+        });
 
-        const id = await requestTransaction(tx);
+        if (!result) throw new Error("Transaction was not submitted");
+        const id = result.transactionId;
         setTxId(id);
         setStatus("submitted");
 
@@ -77,7 +73,7 @@ export function useTransaction(options: UseTransactionOptions = {}) {
         setLoading(false);
       }
     },
-    [publicKey, requestTransaction, addTransaction],
+    [address, executeTransaction, addTransaction],
   );
 
   const clearError = useCallback(() => {

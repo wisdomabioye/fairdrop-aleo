@@ -1,6 +1,11 @@
 
+export type ProgramFunction =
+  | "create_token" | "create_auction" | "place_bid" | "claim"
+  | "close_auction" | "clear_auction" | "join_tokens" | "split_token"
+  | "mint_public" | "transfer_public" | "withdraw_payments" | "withdraw_unsold";
+
 /** Human-readable labels for Aleo program function names */
-export const TX_LABELS: Record<string, string> = {
+export const TX_LABELS: Record<ProgramFunction, string> = {
   create_token:    "Mint Tokens",
   create_auction:  "Create Auction",
   place_bid:       "Place Bid",
@@ -9,8 +14,10 @@ export const TX_LABELS: Record<string, string> = {
   clear_auction:   "Clear Auction",
   join_tokens:     "Join Records",
   split_token:     "Split Record",
-  mint_public:     "Mint Tokens",
-  transfer_public: "Transfer Tokens",
+  mint_public:        "Mint Tokens",
+  transfer_public:    "Transfer Tokens",
+  withdraw_payments:  "Withdraw Payments",
+  withdraw_unsold:    "Withdraw Unsold",
 };
 
 export interface TestToken {

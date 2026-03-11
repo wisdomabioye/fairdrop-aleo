@@ -134,7 +134,7 @@ export function TransactionTracker() {
           </div>
 
           <div className="max-h-72 overflow-y-auto p-2 scrollbar-thin">
-            {transactions.map((tx) => (
+            {[...transactions].reverse().map((tx) => (
               <TxRow key={tx.id} tx={tx} />
             ))}
           </div>

@@ -11,13 +11,8 @@ import {
   getCachedGlobalIds,
   cacheGlobalIds,
 } from "@/shared/lib/auctionConfigCache";
-import {
-  parseStats,
-  parseAuctionConfig,
-  parseAuctionState,
-  type AuctionConfig,
-  type AuctionState,
-} from "@/shared/types/auction";
+import { parseStats, parseAuctionConfig, parseAuctionState } from "@/shared/lib/auctionParsers";
+import type { AuctionConfig, AuctionState } from "@/shared/types/auction";
 
 export interface AuctionEntry {
   config: AuctionConfig;

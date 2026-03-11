@@ -1,10 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
-import {
-  Transaction,
-  WalletAdapterNetwork,
-} from "@demox-labs/aleo-wallet-adapter-base";
+import { useWallet } from "@provablehq/aleo-wallet-adaptor-react";
+import { useTransaction } from "@/shared/hooks/useTransaction";
+import type { ProgramFunction } from "@/constants";
 import { useAuction } from "@/features/auction/hooks/useAuction";
 import { StatusBadge } from "@/features/auction/components/StatusBadge";
 import { useBlockHeight } from "@/shared/hooks/useBlockHeight";
@@ -17,10 +15,8 @@ import { DataRow } from "@/shared/components/ui/DataRow";
 import { PageHeader } from "@/shared/components/ui/PageHeader";
 import { Spinner } from "@/shared/components/ui/Spinner";
 import { getCreatorWithdrawn, getUnsoldWithdrawn } from "@/shared/lib/mappings";
-import { PROGRAM_ID, FEE } from "@/config/network";
-
 export function CreatorDashboardPage() {
-  const { publicKey, requestTransaction } = useWallet();
+  const { address } = useWallet();
   const { blockHeight } = useBlockHeight();
   const [searchParams] = useSearchParams();
   const idFromUrl = searchParams.get("id") ?? "";
@@ -35,6 +31,7 @@ export function CreatorDashboardPage() {
   const [txLoading, setTxLoading] = useState<string | null>(null);
   const [txError, setTxError] = useState<string | null>(null);
   const [txSuccess, setTxSuccess] = useState<string | null>(null);
+  const { execute } = useTransaction();
 
   const status = useMemo(() => {
     if (!config || !state) return "upcoming" as const;
@@ -61,21 +58,13 @@ export function CreatorDashboardPage() {
   const unsoldSupply = config && state ? config.supply - state.total_committed : 0n;
   const maxUnsold = state?.cleared ? unsoldSupply - unsoldWithdrawn : 0n;
 
-  const executeTx = async (fn: string, inputs: string[], label: string) => {
-    if (!publicKey || !requestTransaction) return;
+  const executeTx = async (fn: ProgramFunction, inputs: string[], label: string) => {
+    if (!address) return;
     setTxLoading(label);
     setTxError(null);
     setTxSuccess(null);
     try {
-      const tx = Transaction.createTransaction(
-        publicKey,
-        WalletAdapterNetwork.TestnetBeta,
-        PROGRAM_ID,
-        fn,
-        inputs,
-        FEE,
-      );
-      await requestTransaction(tx);
+      await execute(fn, inputs);
       setTxSuccess(label);
     } catch (e) {
       setTxError(e instanceof Error ? e.message : "Transaction failed");

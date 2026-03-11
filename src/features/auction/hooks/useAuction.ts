@@ -1,11 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { getAuctionConfig, getAuctionState } from "@/shared/lib/mappings";
-import {
-  parseAuctionConfig,
-  parseAuctionState,
-  type AuctionConfig,
-  type AuctionState,
-} from "@/shared/types/auction";
+import { parseAuctionConfig, parseAuctionState } from "@/shared/lib/auctionParsers";
+import type { AuctionConfig, AuctionState } from "@/shared/types/auction";
 import { useRefresh } from "@/shared/context/RefreshContext";
 
 export function useAuction(

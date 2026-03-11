@@ -10,7 +10,7 @@ import { PriceChart } from "../components/PriceChart";
 import { BidForm } from "../components/BidForm";
 import { useAuction } from "../hooks/useAuction";
 import { useCurrentPrice } from "../hooks/useCurrentPrice";
-import { formatField } from "@/shared/lib/formatting";
+import { formatField } from "@/shared/utils/formatting";
 
 export function AuctionDetailPage() {
   const { id } = useParams<{ id: string }>();

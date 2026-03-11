@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
+import { useWallet } from "@provablehq/aleo-wallet-adaptor-react";
 import { useRecords } from "@/shared/hooks/useRecords";
 import { useTransaction } from "@/shared/hooks/useTransaction";
 import { useAuction } from "@/features/auction/hooks/useAuction";
@@ -13,7 +13,7 @@ import { PageHeader } from "@/shared/components/ui/PageHeader";
 import type { BidRecord } from "@/shared/types/auction";
 
 export function ClaimPage() {
-  const { publicKey } = useWallet();
+  const { address } = useWallet();
   const { bidRecords } = useRecords();
   const [selectedBid, setSelectedBid] = useState<BidRecord | null>(null);
   const [success, setSuccess] = useState(false);
@@ -55,7 +55,7 @@ export function ClaimPage() {
         description="Redeem your bid for sale tokens and payment refund."
       />
 
-      {!publicKey && (
+      {!address && (
         <Card>
           <ConnectWalletPrompt
             title="Connect to claim"
@@ -64,7 +64,7 @@ export function ClaimPage() {
         </Card>
       )}
 
-      {publicKey && <Card>
+      {address && <Card>
         <div className="space-y-5">
           <BidRecordSelector
             records={bidRecords}

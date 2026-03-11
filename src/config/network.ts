@@ -3,6 +3,8 @@
  * A missing variable throws at module load time so misconfiguration is caught early.
  */
 
+import { Network } from "@provablehq/aleo-types";
+
 function requireEnv(key: string): string {
   const value = (import.meta.env as Record<string, string | undefined>)[key];
   if (!value) throw new Error(`Missing required environment variable: ${key}`);
@@ -14,6 +16,11 @@ export const NETWORK         = requireEnv("VITE_NETWORK");
 export const EXPLORER_TX_URL = requireEnv("VITE_EXPLORER_TX_URL");
 export const PROGRAM_ID      = requireEnv("VITE_PROGRAM_ID");
 export const FEE             = Number(requireEnv("VITE_FEE"));
+
+export const WALLET_NETWORK: Network =
+  NETWORK === "mainnet" ? Network.MAINNET :
+  NETWORK === "canary"  ? Network.CANARY  :
+                          Network.TESTNET;
 
 console.log("[network config]", {
   NETWORK,
