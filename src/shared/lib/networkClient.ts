@@ -1,5 +1,5 @@
 import { AleoNetworkClient } from "@provablehq/sdk";
-import { NETWORK_URL } from "@/constants";
+import { NETWORK_URL } from "@/config/network";
 
 let client: AleoNetworkClient | null = null;
 

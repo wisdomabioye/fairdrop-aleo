@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
-import { PROGRAM_ID } from "@/constants";
+import { PROGRAM_ID } from "@/config/network";
 import type { TokenRecord, BidRecord } from "../types/auction";
 import { isWalletRecord } from "../types/wallet";
 import { useRefresh } from "../context/RefreshContext";

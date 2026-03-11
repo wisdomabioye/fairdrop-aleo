@@ -4,7 +4,8 @@ import {
   Transaction,
   WalletAdapterNetwork,
 } from "@demox-labs/aleo-wallet-adapter-base";
-import { PROGRAM_ID, FEE, TX_LABELS } from "@/constants";
+import { PROGRAM_ID, FEE } from "@/config/network";
+import { TX_LABELS } from "@/constants";
 import { useTransactionTracker } from "../context/TransactionTrackerContext";
 
 export type TxStatus = "idle" | "signing" | "submitted" | "error";

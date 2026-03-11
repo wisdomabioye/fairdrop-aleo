@@ -10,7 +10,7 @@ import {
   Check,
 } from "lucide-react";
 import { useTransactionTracker, type TrackedTx } from "../context/TransactionTrackerContext";
-import { EXPLORER_TX_URL } from "../../constants";
+import { EXPLORER_TX_URL } from "@/config/network";
 
 // ─── Individual row ───────────────────────────────────────────────────────────
 

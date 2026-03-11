@@ -17,7 +17,7 @@ import { DataRow } from "@/shared/components/ui/DataRow";
 import { PageHeader } from "@/shared/components/ui/PageHeader";
 import { Spinner } from "@/shared/components/ui/Spinner";
 import { getCreatorWithdrawn, getUnsoldWithdrawn } from "@/shared/lib/mappings";
-import { PROGRAM_ID, FEE } from "@/constants";
+import { PROGRAM_ID, FEE } from "@/config/network";
 
 export function CreatorDashboardPage() {
   const { publicKey, requestTransaction } = useWallet();
