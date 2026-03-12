@@ -1,29 +1,41 @@
-// Fairdrop — Privacy-preserving descending-price auction on Aleo.
-// Every participant pays the same final clearing price.
-// Bidder identities and individual amounts are hidden via zero-knowledge proofs.
+// Fairdrop v2 — Privacy-preserving descending-price auction on Aleo.
+//
+// Payment token : Aleo Credits (credits.aleo) — private record OR public balance.
+// Sale tokens   : token_registry.aleo/Token, minted privately at claim time via MINTER_ROLE CPI.
+// Privacy model :
+//   - Bid amount  : public (unavoidable — required for on-chain supply accounting).
+//   - Bid source  : hidden when using place_bid_private (private UTXO consumed).
+//   - Claim recipient : private — bid.owner comes from the private Bid record and
+//                       never appears in any finalize function.
+//   - Sale tokens received  : private (mint_private CPI, recipient hidden).
+//   - Refund received       : private (transfer_public_to_private CPI, recipient hidden).
+//   - Recommended for max privacy: use a fresh address funded via private transfer.
+
+import credits.aleo;
+import token_registry.aleo;
 
 program fairdrop.aleo {
 
-    @admin(address="aleo128wz89c78ur4mx378056yd9q7kqmphr07k0kfsmnwvqnv7g9syyqkg263r")
-    async constructor() {}
+    // =========================================================================
+    // Shadowed structs (Leo does not import structs from external programs)
+    // =========================================================================
+
+    // Shadowed from token_registry.aleo — used for BHP256 role-key hashing.
+    struct TokenOwner {
+        account: address,
+        token_id: field,
+    }
 
     // =========================================================================
     // Records (Private — encrypted to owner)
     // =========================================================================
 
-    // Private token balance.
-    record Token {
-        owner: address,
-        token_id: field,
-        amount: u128,
-    }
-
-    // Private bid receipt — proof of participation, used to claim after clearing.
+    // Private bid receipt. Consumed once at claim time — no double claims.
     record Bid {
         owner: address,
         auction_id: field,
         quantity: u128,
-        payment_amount: u128,
+        payment_amount: u128,   // microcredits paid (u64 range, stored as u128)
     }
 
     // =========================================================================
@@ -35,30 +47,31 @@ program fairdrop.aleo {
         auction_id: field,
         creator: address,
         sale_token_id: field,
-        payment_token_id: field,
+        payment_token_id: field,    // always CREDITS_RESERVED_TOKEN_ID in v2;
+                                    // kept for future ARC-21 stablecoin support
         supply: u128,
-        start_price: u128,
-        floor_price: u128,
+        start_price: u128,          // microcredits per token
+        floor_price: u128,          // microcredits per token
         start_block: u32,
         end_block: u32,
         price_decay_blocks: u32,
         price_decay_amount: u128,
-        max_bid_amount: u128,       // 0 = unlimited
-        min_bid_amount: u128,       // minimum quantity per bid
+        max_bid_amount: u128,       // 0 = unlimited per bidder
+        min_bid_amount: u128,
     }
 
-    // Mutable auction state updated during the auction lifecycle.
+    // Mutable auction state updated during the lifecycle.
     struct AuctionState {
         total_committed: u128,      // total sale tokens bid for
-        total_payments: u128,       // total payment tokens collected
-        supply_met: bool,           // true when total_committed >= supply
-        ended_at_block: u32,        // block height when supply was met (0 if not yet)
-        cleared: bool,              // true after close_auction is called
-        clearing_price: u128,       // final uniform price (set at clearing)
-        creator_revenue: u128,      // total_committed * clearing_price (set at clearing)
+        total_payments: u128,       // total microcredits collected
+        supply_met: bool,
+        ended_at_block: u32,        // block when supply was exhausted (0 if not yet)
+        cleared: bool,
+        clearing_price: u128,       // uniform price all winners pay
+        creator_revenue: u128,      // total_committed * clearing_price
     }
 
-    // Used to hash (bidder, auction_id) into a pseudonymous key for bid tracking.
+    // Used to hash (bidder, auction_id) → pseudonymous key for per-bidder limits.
     struct BidderKey {
         bidder: address,
         auction_id: field,
@@ -70,96 +83,65 @@ program fairdrop.aleo {
         nonce: u64,
     }
 
-    // Global on-chain statistics.
     struct Stats {
         total_auctions: u64,
         total_bids: u64,
     }
 
     // =========================================================================
+    // Constants
+    // =========================================================================
+
+    // ALEO credits registered in token_registry.aleo.
+    const CREDITS_RESERVED_TOKEN_ID: field =
+        3443843282313283355522573239085696902919850365217539366784739393210722344986field;
+
+    const MINTER_ROLE: u8 = 1u8;
+    const SUPPLY_MANAGER_ROLE: u8 = 3u8;
+
+    // =========================================================================
     // Mappings (Public — on-chain state)
     // =========================================================================
 
-    // Auction configuration, keyed by auction_id.
     mapping auction_configs: field => AuctionConfig;
-
-    // Auction state, keyed by auction_id.
     mapping auction_states: field => AuctionState;
 
-    // Cumulative bid quantity per (bidder, auction), keyed by hash(BidderKey).
-    // Used to enforce max_bid_amount. Bidder identity is pseudonymous (hashed).
+    // Cumulative bid quantity per hash(BidderKey) — enforces max_bid_amount.
+    // Bidder identity is pseudonymous: only the BHP256 hash reaches finalize.
     mapping bid_totals: field => u128;
 
-    // Escrowed sale tokens per auction. Deposited by creator, claimed by bidders.
+    // Mint budget per auction (decremented at each claim and withdraw_unsold).
+    // No actual tokens are held here — fairdrop mints via MINTER_ROLE CPI.
     mapping escrow_sales: field => u128;
 
-    // Escrowed payment tokens per auction. Deposited by bidders, split between
-    // refunds (to bidders) and revenue (to creator) after clearing.
+    // Microcredits held per auction (decremented at each claim refund and creator withdrawal).
+    // Actual credits live in fairdrop's credits.aleo/account public balance.
     mapping escrow_payments: field => u128;
 
-    // Tracks how much revenue the creator has withdrawn.
     mapping creator_withdrawn: field => u128;
-
-    // Tracks how many unsold sale tokens the creator has withdrawn.
     mapping unsold_withdrawn: field => u128;
 
-    // Global stats, keyed by 0field (singleton).
     mapping stats: field => Stats;
 
-    // Sequential index for auction discovery: index → auction_id.
-    // Enables enumeration without knowing IDs in advance.
-    // Key = total_auctions value at creation time (0-based sequential u64).
+    // Global sequential index: total_auctions_at_creation → auction_id.
     mapping auction_index: u64 => field;
 
-    // Per-creator auction count. Enables instant zero-check before traversal.
+    // Per-creator count + linked list for O(K) creator auction discovery.
     mapping creator_auction_count: address => u64;
-
-    // Per-creator linked list for O(K) auction discovery — no BHP256 needed.
-    // Head: creator address → most recent auction_id (0field = no auctions yet).
     mapping creator_latest_auction: address => field;
-    // Link: auction_id → that creator's previous auction_id (0field = first auction).
     mapping auction_prev_by_creator: field => field;
 
     // =========================================================================
-    // 1. Token Helpers
+    // 1. Create Auction
     // =========================================================================
 
-    // Mint tokens. In production, this would be access-controlled or imported.
-    transition create_token(
-        recipient: address,
-        token_id: field,
-        amount: u128,
-    ) -> Token {
-        assert(amount > 0u128);
-        return Token { owner: recipient, token_id: token_id, amount: amount };
-    }
-
-    // Merge two token records of the same type.
-    transition join_tokens(a: Token, b: Token) -> Token {
-        assert_eq(a.token_id, b.token_id);
-        return Token { owner: a.owner, token_id: a.token_id, amount: a.amount + b.amount };
-    }
-
-    // Split a token record into two.
-    transition split_token(input: Token, amount: u128) -> (Token, Token) {
-        assert(amount > 0u128);
-        let remaining: u128 = input.amount - amount;
-        assert(remaining > 0u128);
-        return (
-            Token { owner: input.owner, token_id: input.token_id, amount: amount },
-            Token { owner: input.owner, token_id: input.token_id, amount: remaining },
-        );
-    }
-
-    // =========================================================================
-    // 2. Create Auction
-    // =========================================================================
-
-    // Creator deposits sale tokens and configures the auction.
-    // All config is public so participants can verify the rules.
+    // Creator registers an auction. No token deposit required — fairdrop holds
+    // MINTER_ROLE on the sale token and mints directly to winners at claim time.
+    // All parameters are public so participants can verify the rules.
     async transition create_auction(
-        sale_tokens: Token,
+        public sale_token_id: field,
         public payment_token_id: field,
+        public supply: u128,
         public start_price: u128,
         public floor_price: u128,
         public start_block: u32,
@@ -169,12 +151,12 @@ program fairdrop.aleo {
         public max_bid_amount: u128,
         public min_bid_amount: u128,
     ) -> Future {
-        assert(sale_tokens.amount > 0u128);
+        assert(supply > 0u128);
 
         return finalize_create_auction(
             self.signer,
-            sale_tokens.token_id,
-            sale_tokens.amount,
+            sale_token_id,
+            supply,
             payment_token_id,
             start_price,
             floor_price,
@@ -201,8 +183,11 @@ program fairdrop.aleo {
         max_bid_amount: u128,
         min_bid_amount: u128,
     ) {
-        // Validate parameters.
-        assert(payment_token_id != sale_token_id);
+        // Only ALEO credits supported as payment token in v2.
+        assert_eq(payment_token_id, CREDITS_RESERVED_TOKEN_ID);
+        assert(sale_token_id != CREDITS_RESERVED_TOKEN_ID);
+
+        // Validate auction parameters.
         assert(start_block >= block.height);
         assert(floor_price > 0u128);
         assert(start_price > floor_price);
@@ -212,6 +197,16 @@ program fairdrop.aleo {
         assert(supply > 0u128);
         assert(min_bid_amount > 0u128);
         assert(max_bid_amount == 0u128 || max_bid_amount >= min_bid_amount);
+
+        // Verify fairdrop.aleo has MINTER_ROLE (or SUPPLY_MANAGER_ROLE) on the sale token.
+        // Uses get_or_use so a missing key returns 0u8 and fails the assert cleanly.
+        let role_owner: TokenOwner = TokenOwner {
+            account: fairdrop.aleo,
+            token_id: sale_token_id,
+        };
+        let role_owner_hash: field = BHP256::hash_to_field(role_owner);
+        let role: u8 = token_registry.aleo/roles.get_or_use(role_owner_hash, 0u8);
+        assert(role == MINTER_ROLE || role == SUPPLY_MANAGER_ROLE);
 
         // Derive auction_id from creator + sequential nonce.
         let current_stats: Stats = stats.get_or_use(0field, Stats {
@@ -248,20 +243,19 @@ program fairdrop.aleo {
             creator_revenue: 0u128,
         });
 
-        // Lock sale tokens in escrow.
+        // Set mint budget. No tokens are held — this tracks how many can still be minted.
         escrow_sales.set(auction_id, supply);
 
-        // Register auction in the global sequential index for discovery.
+        // Register in global sequential index.
         auction_index.set(current_stats.total_auctions, auction_id);
 
-        // Update per-creator count and linked list for efficient creator discovery.
+        // Update per-creator count and linked list.
         let creator_count: u64 = creator_auction_count.get_or_use(creator, 0u64);
         creator_auction_count.set(creator, creator_count + 1u64);
         let prev_head: field = creator_latest_auction.get_or_use(creator, 0field);
         auction_prev_by_creator.set(auction_id, prev_head);
         creator_latest_auction.set(creator, auction_id);
 
-        // Increment global auction counter.
         stats.set(0field, Stats {
             total_auctions: current_stats.total_auctions + 1u64,
             total_bids: current_stats.total_bids,
@@ -269,66 +263,67 @@ program fairdrop.aleo {
     }
 
     // =========================================================================
-    // 3. Place Bid
+    // 2. Place Bid — Private Credits
     // =========================================================================
 
-    // Bidder commits payment tokens to purchase sale tokens at the current price.
-    // The full payment Token is locked — no change returned. Any overpayment
-    // above the clearing price is refunded when the bidder calls claim().
+    // Bidder provides a private credits.aleo/credits record.
+    // payment_amount microcredits are transferred to fairdrop's public credits balance;
+    // a change record is returned to the bidder.
     //
-    // Privacy model:
-    //   - Bidder identity: pseudonymous (hashed in ZK, only hash goes on-chain)
-    //   - Bid quantity: visible in finalize (required to update aggregate demand)
-    //   - Payment record: consumed privately, only the amount is public
-    async transition place_bid(
-        payment: Token,
+    // What is hidden  : which UTXO was consumed (input record serial number).
+    // What is visible : bid amount, bidder address (self.signer as tx fee payer).
+    // Max privacy tip : use a fresh address funded via private transfer beforehand.
+    async transition place_bid_private(
+        payment: credits.aleo/credits,
         public auction_id: field,
         public quantity: u128,
-    ) -> (Bid, Future) {
+        public payment_amount: u64,
+    ) -> (credits.aleo/credits, Bid, Future) {
         assert(quantity > 0u128);
+        assert(payment_amount > 0u64);
 
-        // Create private bid receipt. Full payment amount is locked.
+        // Consume the private credits record. Deposits payment_amount to fairdrop's
+        // public credits.aleo/account balance. Returns change record to caller.
+        let (change, f0): (credits.aleo/credits, Future) =
+            credits.aleo/transfer_private_to_public(payment, self.address, payment_amount);
+
         let bid: Bid = Bid {
             owner: self.signer,
             auction_id: auction_id,
             quantity: quantity,
-            payment_amount: payment.amount,
+            payment_amount: payment_amount as u128,
         };
 
-        // Hash bidder identity in ZK — only the hash reaches finalize.
         let bid_total_key: field = BHP256::hash_to_field(
             BidderKey { bidder: self.signer, auction_id: auction_id }
         );
 
-        return (bid, finalize_place_bid(
+        return (change, bid, finalize_place_bid_private(
+            f0,
             auction_id,
             bid_total_key,
             quantity,
-            payment.token_id,
-            payment.amount,
+            payment_amount as u128,
         ));
     }
 
-    async function finalize_place_bid(
+    async function finalize_place_bid_private(
+        f0: Future,
         auction_id: field,
         bid_total_key: field,
         quantity: u128,
-        payment_token_id: field,
         payment_amount: u128,
     ) {
+        f0.await();
+
         let config: AuctionConfig = auction_configs.get(auction_id);
         let state: AuctionState = auction_states.get(auction_id);
 
-        // Auction must be active.
         assert(!state.supply_met);
         assert(!state.cleared);
         assert(block.height >= config.start_block);
         assert(block.height < config.end_block);
 
-        // Payment must be in the correct token.
-        assert_eq(payment_token_id, config.payment_token_id);
-
-        // Compute current price from the decay schedule.
         let blocks_elapsed: u32 = block.height - config.start_block;
         let decay_steps: u128 = (blocks_elapsed / config.price_decay_blocks) as u128;
         let total_decay: u128 = decay_steps * config.price_decay_amount;
@@ -337,16 +332,10 @@ program fairdrop.aleo {
             ? config.start_price - total_decay
             : config.floor_price;
 
-        // Payment must cover quantity at current price.
         assert(payment_amount >= quantity * current_price);
-
-        // Enforce minimum bid quantity.
         assert(quantity >= config.min_bid_amount);
-
-        // Quantity must not exceed remaining supply.
         assert(state.total_committed + quantity <= config.supply);
 
-        // Enforce max bid amount per bidder (0 = unlimited).
         let current_total: u128 = bid_totals.get_or_use(bid_total_key, 0u128);
         let new_total: u128 = current_total + quantity;
         let within_limit: bool = config.max_bid_amount == 0u128
@@ -354,7 +343,6 @@ program fairdrop.aleo {
         assert(within_limit);
         bid_totals.set(bid_total_key, new_total);
 
-        // Update auction state.
         let new_committed: u128 = state.total_committed + quantity;
         let is_supply_met: bool = new_committed >= config.supply;
 
@@ -368,11 +356,105 @@ program fairdrop.aleo {
             creator_revenue: 0u128,
         });
 
-        // Add payment to escrow.
         let current_escrow: u128 = escrow_payments.get_or_use(auction_id, 0u128);
         escrow_payments.set(auction_id, current_escrow + payment_amount);
 
-        // Increment bid counter.
+        let current_stats: Stats = stats.get(0field);
+        stats.set(0field, Stats {
+            total_auctions: current_stats.total_auctions,
+            total_bids: current_stats.total_bids + 1u64,
+        });
+    }
+
+    // =========================================================================
+    // 3. Place Bid — Public Credits
+    // =========================================================================
+
+    // Bidder pays from their public credits.aleo/account mapping balance.
+    // transfer_public_as_signer pulls from self.signer (the original tx initiator),
+    // not self.caller (fairdrop.aleo), so no pre-approval is needed.
+    async transition place_bid_public(
+        public auction_id: field,
+        public quantity: u128,
+        public payment_amount: u64,
+    ) -> (Bid, Future) {
+        assert(quantity > 0u128);
+        assert(payment_amount > 0u64);
+
+        let f0: Future = credits.aleo/transfer_public_as_signer(self.address, payment_amount);
+
+        let bid: Bid = Bid {
+            owner: self.signer,
+            auction_id: auction_id,
+            quantity: quantity,
+            payment_amount: payment_amount as u128,
+        };
+
+        let bid_total_key: field = BHP256::hash_to_field(
+            BidderKey { bidder: self.signer, auction_id: auction_id }
+        );
+
+        return (bid, finalize_place_bid_public(
+            f0,
+            auction_id,
+            bid_total_key,
+            quantity,
+            payment_amount as u128,
+        ));
+    }
+
+    async function finalize_place_bid_public(
+        f0: Future,
+        auction_id: field,
+        bid_total_key: field,
+        quantity: u128,
+        payment_amount: u128,
+    ) {
+        f0.await();
+
+        let config: AuctionConfig = auction_configs.get(auction_id);
+        let state: AuctionState = auction_states.get(auction_id);
+
+        assert(!state.supply_met);
+        assert(!state.cleared);
+        assert(block.height >= config.start_block);
+        assert(block.height < config.end_block);
+
+        let blocks_elapsed: u32 = block.height - config.start_block;
+        let decay_steps: u128 = (blocks_elapsed / config.price_decay_blocks) as u128;
+        let total_decay: u128 = decay_steps * config.price_decay_amount;
+        let price_range: u128 = config.start_price - config.floor_price;
+        let current_price: u128 = total_decay < price_range
+            ? config.start_price - total_decay
+            : config.floor_price;
+
+        assert(payment_amount >= quantity * current_price);
+        assert(quantity >= config.min_bid_amount);
+        assert(state.total_committed + quantity <= config.supply);
+
+        let current_total: u128 = bid_totals.get_or_use(bid_total_key, 0u128);
+        let new_total: u128 = current_total + quantity;
+        let within_limit: bool = config.max_bid_amount == 0u128
+            || new_total <= config.max_bid_amount;
+        assert(within_limit);
+        bid_totals.set(bid_total_key, new_total);
+
+        let new_committed: u128 = state.total_committed + quantity;
+        let is_supply_met: bool = new_committed >= config.supply;
+
+        auction_states.set(auction_id, AuctionState {
+            total_committed: new_committed,
+            total_payments: state.total_payments + payment_amount,
+            supply_met: is_supply_met,
+            ended_at_block: is_supply_met ? block.height : state.ended_at_block,
+            cleared: false,
+            clearing_price: 0u128,
+            creator_revenue: 0u128,
+        });
+
+        let current_escrow: u128 = escrow_payments.get_or_use(auction_id, 0u128);
+        escrow_payments.set(auction_id, current_escrow + payment_amount);
+
         let current_stats: Stats = stats.get(0field);
         stats.set(0field, Stats {
             total_auctions: current_stats.total_auctions,
@@ -384,12 +466,12 @@ program fairdrop.aleo {
     // 4. Close Auction (Permissionless)
     // =========================================================================
 
-    // Anyone can call this once the auction has ended (by supply or by time).
+    // Anyone can call once the auction has ended (supply met OR past end_block).
     // Determines the clearing price and locks it permanently.
     //
-    // Clearing price logic:
-    //   - Supply met: price at the block when supply was exhausted (from decay schedule)
-    //   - Supply not met: floor_price (market didn't clear above floor)
+    // Clearing price:
+    //   Supply met     → price at the block when supply was exhausted
+    //   Supply not met → floor_price (market did not clear above floor)
     async transition close_auction(public auction_id: field) -> Future {
         return finalize_close_auction(auction_id);
     }
@@ -398,15 +480,9 @@ program fairdrop.aleo {
         let config: AuctionConfig = auction_configs.get(auction_id);
         let state: AuctionState = auction_states.get(auction_id);
 
-        // Must not already be cleared.
         assert(!state.cleared);
-
-        // Must have ended: supply exhausted OR past end_block.
         assert(state.supply_met || block.height >= config.end_block);
 
-        // Compute clearing price.
-        // Supply met: price at the block when supply was exhausted.
-        // Supply not met: floor_price — market didn't clear above floor.
         if (state.supply_met) {
             let blocks_elapsed: u32 = state.ended_at_block - config.start_block;
             let decay_steps: u128 = (blocks_elapsed / config.price_decay_blocks) as u128;
@@ -415,7 +491,6 @@ program fairdrop.aleo {
             let clearing_price: u128 = total_decay < price_range
                 ? config.start_price - total_decay
                 : config.floor_price;
-
             let revenue: u128 = state.total_committed * clearing_price;
 
             auction_states.set(auction_id, AuctionState {
@@ -444,74 +519,81 @@ program fairdrop.aleo {
     }
 
     // =========================================================================
-    // 5. Claim (Bidder)
+    // 5. Claim
     // =========================================================================
 
-    // Bidder redeems their Bid record for sale tokens + payment refund.
-    // The Bid record is consumed (spent once — no double claims).
+    // Bidder redeems their Bid record after the auction is cleared.
+    // Returns two private outputs:
+    //   1. token_registry.aleo/Token  — sale tokens, minted via MINTER_ROLE CPI.
+    //   2. credits.aleo/credits       — overpayment refund above clearing price.
     //
-    // The caller reads clearing_price and token IDs from public mappings
-    // and passes them in. Finalize validates they match on-chain state.
+    // Both recipients are bid.owner — a private field from the consumed Bid record.
+    // bid.owner never appears in any finalize function, so neither recipient
+    // nor the amounts they receive are linked on-chain.
+    //
+    // Note: refund_amount is visible in finalize (Aleo constraint).
+    //       The recipient of the refund is NOT visible.
     async transition claim(
         bid: Bid,
         public clearing_price: u128,
         public sale_token_id: field,
-        public payment_token_id: field,
-    ) -> (Token, Token, Future) {
-        // Sale tokens received = bid quantity.
+    ) -> (token_registry.aleo/Token, credits.aleo/credits, Future) {
         let sale_amount: u128 = bid.quantity;
-
-        // Refund = overpayment above clearing price.
         let cost_at_clearing: u128 = bid.quantity * clearing_price;
-        let refund_amount: u128 = bid.payment_amount - cost_at_clearing;
+        let refund_amount: u64 = (bid.payment_amount - cost_at_clearing) as u64;
 
-        let sale_token: Token = Token {
-            owner: bid.owner,
-            token_id: sale_token_id,
-            amount: sale_amount,
-        };
+        // CPI: mint sale tokens privately to bidder.
+        // bid.owner is private (from Bid record) — never exposed in finalize.
+        let (sale_token, f_mint): (token_registry.aleo/Token, Future) =
+            token_registry.aleo/mint_private(
+                sale_token_id,
+                bid.owner,
+                sale_amount,
+                false,          // external_authorization_required
+                4294967295u32   // authorized_until — no expiry
+            );
 
-        let refund_token: Token = Token {
-            owner: bid.owner,
-            token_id: payment_token_id,
-            amount: refund_amount,
-        };
+        // CPI: return refund privately from fairdrop's public credits balance.
+        // transfer_public_to_private takes recipient as address.private — stays hidden.
+        let (refund, f_refund): (credits.aleo/credits, Future) =
+            credits.aleo/transfer_public_to_private(bid.owner, refund_amount);
 
-        return (sale_token, refund_token, finalize_claim(
+        return (sale_token, refund, finalize_claim(
+            f_mint,
+            f_refund,
             bid.auction_id,
             clearing_price,
             sale_token_id,
-            payment_token_id,
             sale_amount,
-            refund_amount,
+            refund_amount as u128,
         ));
     }
 
     async function finalize_claim(
+        f_mint: Future,
+        f_refund: Future,
         auction_id: field,
         clearing_price: u128,
         sale_token_id: field,
-        payment_token_id: field,
         sale_amount: u128,
         refund_amount: u128,
     ) {
+        f_mint.await();
+        f_refund.await();
+
         let config: AuctionConfig = auction_configs.get(auction_id);
         let state: AuctionState = auction_states.get(auction_id);
 
-        // Auction must be cleared.
         assert(state.cleared);
-
-        // Validate caller-provided values match on-chain state.
         assert_eq(clearing_price, state.clearing_price);
         assert_eq(sale_token_id, config.sale_token_id);
-        assert_eq(payment_token_id, config.payment_token_id);
 
-        // Deduct sale tokens from escrow.
+        // Deduct from mint budget.
         let sale_remaining: u128 = escrow_sales.get(auction_id);
         assert(sale_amount <= sale_remaining);
         escrow_sales.set(auction_id, sale_remaining - sale_amount);
 
-        // Deduct refund from payment escrow.
+        // Deduct refund from credits escrow.
         let payment_remaining: u128 = escrow_payments.get(auction_id);
         assert(refund_amount <= payment_remaining);
         escrow_payments.set(auction_id, payment_remaining - refund_amount);
@@ -521,77 +603,78 @@ program fairdrop.aleo {
     // 6. Creator Withdrawals
     // =========================================================================
 
-    // Creator withdraws revenue (payment tokens) after clearing.
-    // Capped at creator_revenue to protect the refund pool.
+    // Creator withdraws earned revenue (microcredits) after clearing.
+    // Transfers from fairdrop's public credits.aleo/account balance to creator.
+    // Capped at creator_revenue to protect the bidder refund pool.
     async transition withdraw_payments(
         public auction_id: field,
         public amount: u128,
-        public payment_token_id: field,
-    ) -> (Token, Future) {
+    ) -> Future {
         assert(amount > 0u128);
 
-        let token: Token = Token {
-            owner: self.signer,
-            token_id: payment_token_id,
-            amount: amount,
-        };
+        // transfer_public pulls from self.caller's (fairdrop.aleo) public balance.
+        let f0: Future = credits.aleo/transfer_public(self.signer, amount as u64);
 
-        return (token, finalize_withdraw_payments(
-            auction_id, self.signer, amount, payment_token_id,
-        ));
+        return finalize_withdraw_payments(f0, auction_id, self.signer, amount);
     }
 
     async function finalize_withdraw_payments(
+        f0: Future,
         auction_id: field,
         caller: address,
         amount: u128,
-        payment_token_id: field,
     ) {
+        f0.await();
+
         let config: AuctionConfig = auction_configs.get(auction_id);
         let state: AuctionState = auction_states.get(auction_id);
 
         assert(state.cleared);
         assert_eq(caller, config.creator);
-        assert_eq(payment_token_id, config.payment_token_id);
 
-        // Creator can only withdraw up to their revenue (protects refund pool).
         let withdrawn: u128 = creator_withdrawn.get_or_use(auction_id, 0u128);
         let new_withdrawn: u128 = withdrawn + amount;
         assert(new_withdrawn <= state.creator_revenue);
         creator_withdrawn.set(auction_id, new_withdrawn);
 
-        // Deduct from payment escrow.
         let escrow: u128 = escrow_payments.get(auction_id);
         assert(amount <= escrow);
         escrow_payments.set(auction_id, escrow - amount);
     }
 
-    // Creator withdraws unsold sale tokens after clearing.
-    // Only relevant when supply was not fully met.
+    // Creator mints remaining unsold tokens to themselves after clearing.
+    // Only available when supply was not fully committed.
+    // Returns a private token_registry.aleo/Token record to the creator.
     async transition withdraw_unsold(
         public auction_id: field,
         public amount: u128,
         public sale_token_id: field,
-    ) -> (Token, Future) {
+    ) -> (token_registry.aleo/Token, Future) {
         assert(amount > 0u128);
 
-        let token: Token = Token {
-            owner: self.signer,
-            token_id: sale_token_id,
-            amount: amount,
-        };
+        let (token, f_mint): (token_registry.aleo/Token, Future) =
+            token_registry.aleo/mint_private(
+                sale_token_id,
+                self.signer,
+                amount,
+                false,
+                4294967295u32
+            );
 
         return (token, finalize_withdraw_unsold(
-            auction_id, self.signer, amount, sale_token_id,
+            f_mint, auction_id, self.signer, amount, sale_token_id
         ));
     }
 
     async function finalize_withdraw_unsold(
+        f_mint: Future,
         auction_id: field,
         caller: address,
         amount: u128,
         sale_token_id: field,
     ) {
+        f_mint.await();
+
         let config: AuctionConfig = auction_configs.get(auction_id);
         let state: AuctionState = auction_states.get(auction_id);
 
@@ -599,14 +682,14 @@ program fairdrop.aleo {
         assert_eq(caller, config.creator);
         assert_eq(sale_token_id, config.sale_token_id);
 
-        // Unsold = supply - total_committed. Creator can only withdraw unsold tokens.
+        // Unsold = supply - total_committed. Creator can only withdraw this amount.
         let unsold: u128 = config.supply - state.total_committed;
         let withdrawn: u128 = unsold_withdrawn.get_or_use(auction_id, 0u128);
         let new_withdrawn: u128 = withdrawn + amount;
         assert(new_withdrawn <= unsold);
         unsold_withdrawn.set(auction_id, new_withdrawn);
 
-        // Deduct from escrow.
+        // Deduct from mint budget.
         let escrow: u128 = escrow_sales.get(auction_id);
         assert(amount <= escrow);
         escrow_sales.set(auction_id, escrow - amount);
