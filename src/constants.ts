@@ -1,23 +1,25 @@
 
 export type ProgramFunction =
-  | "create_token" | "create_auction" | "place_bid" | "claim"
-  | "close_auction" | "clear_auction" | "join_tokens" | "split_token"
-  | "mint_public" | "transfer_public" | "withdraw_payments" | "withdraw_unsold";
+  // fairdrop_v3.aleo
+  | "create_auction" | "place_bid_private" | "place_bid_public" | "claim"
+  | "close_auction" | "withdraw_payments" | "withdraw_unsold"
+  // token_registry.aleo
+  | "register_token" | "mint_private" | "burn_private" | "set_role" | "remove_role";
 
 /** Human-readable labels for Aleo program function names */
 export const TX_LABELS: Record<ProgramFunction, string> = {
-  create_token:    "Mint Tokens",
-  create_auction:  "Create Auction",
-  place_bid:       "Place Bid",
-  claim:           "Claim Tokens",
-  close_auction:   "Close Auction",
-  clear_auction:   "Clear Auction",
-  join_tokens:     "Join Records",
-  split_token:     "Split Record",
-  mint_public:        "Mint Tokens",
-  transfer_public:    "Transfer Tokens",
-  withdraw_payments:  "Withdraw Payments",
-  withdraw_unsold:    "Withdraw Unsold",
+  create_auction:    "Create Auction",
+  place_bid_private: "Place Bid (Private)",
+  place_bid_public:  "Place Bid (Public)",
+  claim:             "Claim Tokens",
+  close_auction:     "Close Auction",
+  withdraw_payments: "Withdraw Payments",
+  withdraw_unsold:   "Withdraw Unsold",
+  register_token:    "Register Token",
+  mint_private:      "Mint Tokens",
+  burn_private:      "Burn Tokens",
+  set_role:          "Set Role",
+  remove_role:       "Remove Role",
 };
 
 export interface TestToken {

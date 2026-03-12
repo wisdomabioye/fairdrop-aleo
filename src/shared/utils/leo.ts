@@ -39,19 +39,19 @@ export function parsePlaintext(text: string): Record<string, string> {
   return result;
 }
 
-/** "123u128.private" or "123u128" → 123n */
+/** "123u128.private", "123u128", "6u8", etc. → 123n */
 export function parseU128(value: string): bigint {
-  return BigInt(stripVisibility(value).replace(/u128$/, ""));
+  return BigInt(stripVisibility(value).replace(/u\d+$/, ""));
 }
 
-/** "5u32.private" or "5u32" → 5 */
+/** "5u32.private", "5u32", "5u8", etc. → 5 */
 export function parseU32(value: string): number {
-  return Number(stripVisibility(value).replace(/u32$/, ""));
+  return Number(stripVisibility(value).replace(/u\d+$/, ""));
 }
 
-/** "5u64.private" or "5u64" → 5 */
+/** "5u64.private", "5u64", etc. → 5 */
 export function parseU64(value: string): number {
-  return Number(stripVisibility(value).replace(/u64$/, ""));
+  return Number(stripVisibility(value).replace(/u\d+$/, ""));
 }
 
 /** "true.private" or "true" → true */

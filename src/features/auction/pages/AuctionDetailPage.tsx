@@ -1,6 +1,6 @@
 import { useParams } from "react-router-dom";
 import { useBlockHeight } from "@/shared/hooks/useBlockHeight";
-import { useRecords } from "@/shared/hooks/useRecords";
+import { useCreditRecords } from "@/shared/hooks/useCreditRecords";
 import { Spinner } from "@/shared/components/ui/Spinner";
 import { Alert } from "@/shared/components/ui/Alert";
 import { PageHeader } from "@/shared/components/ui/PageHeader";
@@ -17,7 +17,7 @@ export function AuctionDetailPage() {
   const { config, state, loading, error } = useAuction(id, { pollInterval: 15_000 });
   const { blockHeight } = useBlockHeight();
   const { price, status: priceStatus } = useCurrentPrice(config, blockHeight);
-  const { tokenRecords } = useRecords();
+  const { creditRecords } = useCreditRecords();
 
   const status = state?.cleared ? "cleared" : state?.supply_met ? "supply_met" : priceStatus;
   const isActive = status === "active" || status === "ending";
@@ -72,7 +72,7 @@ export function AuctionDetailPage() {
             <BidForm
               config={config}
               currentPrice={price}
-              paymentRecords={tokenRecords}
+              creditRecords={creditRecords}
             />
           </div>
         )}

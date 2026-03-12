@@ -7,14 +7,15 @@ import { useAuction } from "@/features/auction/hooks/useAuction";
 import { StatusBadge } from "@/features/auction/components/StatusBadge";
 import { useBlockHeight } from "@/shared/hooks/useBlockHeight";
 import { TransactionButton } from "@/shared/components/TransactionButton";
+import { RevenuePanel } from "../components/RevenuePanel";
 import { Card } from "@/shared/components/ui/Card";
 import { Input } from "@/shared/components/ui/Input";
 import { Button } from "@/shared/components/ui/Button";
 import { Alert } from "@/shared/components/ui/Alert";
-import { DataRow } from "@/shared/components/ui/DataRow";
 import { PageHeader } from "@/shared/components/ui/PageHeader";
 import { Spinner } from "@/shared/components/ui/Spinner";
 import { getCreatorWithdrawn, getUnsoldWithdrawn } from "@/shared/lib/mappings";
+
 export function CreatorDashboardPage() {
   const { address } = useWallet();
   const { blockHeight } = useBlockHeight();
@@ -24,13 +25,13 @@ export function CreatorDashboardPage() {
   const [auctionId, setAuctionId] = useState<string | undefined>(idFromUrl || undefined);
   const { config, state, loading, error } = useAuction(auctionId);
 
-  const [withdrawn, setWithdrawn] = useState(0n);
+  const [withdrawn, setWithdrawn]           = useState(0n);
   const [unsoldWithdrawn, setUnsoldWithdrawn] = useState(0n);
-  const [paymentAmount, setPaymentAmount] = useState("");
-  const [unsoldAmount, setUnsoldAmount] = useState("");
-  const [txLoading, setTxLoading] = useState<string | null>(null);
-  const [txError, setTxError] = useState<string | null>(null);
-  const [txSuccess, setTxSuccess] = useState<string | null>(null);
+  const [paymentAmount, setPaymentAmount]   = useState("");
+  const [unsoldAmount, setUnsoldAmount]     = useState("");
+  const [txLoading, setTxLoading]           = useState<string | null>(null);
+  const [txError, setTxError]               = useState<string | null>(null);
+  const [txSuccess, setTxSuccess]           = useState<string | null>(null);
   const { execute } = useTransaction();
 
   const status = useMemo(() => {
@@ -42,21 +43,20 @@ export function CreatorDashboardPage() {
     return "upcoming" as const;
   }, [config, state, blockHeight]);
 
-  // Fetch withdrawal amounts
   useEffect(() => {
     if (!auctionId) return;
     getCreatorWithdrawn(auctionId).then((raw) => {
-      if (raw) setWithdrawn(BigInt(raw.replace("u128", "")));
+      if (raw) setWithdrawn(BigInt(raw.replace(/u128$/, "")));
     });
     getUnsoldWithdrawn(auctionId).then((raw) => {
-      if (raw) setUnsoldWithdrawn(BigInt(raw.replace("u128", "")));
+      if (raw) setUnsoldWithdrawn(BigInt(raw.replace(/u128$/, "")));
     });
   }, [auctionId, txSuccess]);
 
-  const canClose = (status === "supply_met" || status === "ended") && !state?.cleared;
+  const canClose        = (status === "supply_met" || status === "ended") && !state?.cleared;
+  const unsoldSupply    = config && state ? config.supply - state.total_committed : 0n;
   const maxWithdrawable = state?.cleared ? state.creator_revenue - withdrawn : 0n;
-  const unsoldSupply = config && state ? config.supply - state.total_committed : 0n;
-  const maxUnsold = state?.cleared ? unsoldSupply - unsoldWithdrawn : 0n;
+  const maxUnsold       = state?.cleared ? unsoldSupply - unsoldWithdrawn : 0n;
 
   const executeTx = async (fn: ProgramFunction, inputs: string[], label: string) => {
     if (!address) return;
@@ -90,35 +90,26 @@ export function CreatorDashboardPage() {
             placeholder="Enter your auction ID"
           />
         </div>
-        <Button onClick={() => setAuctionId(auctionIdInput.trim())} size="lg">
-          Load
-        </Button>
+        <Button onClick={() => setAuctionId(auctionIdInput.trim())} size="lg">Load</Button>
       </div>
 
       {loading && <Spinner center size="lg" />}
-
       {error && <p className="text-sm text-destructive">{error}</p>}
 
       {config && state && (
         <div className="space-y-6">
-          {/* Status */}
           <div className="flex items-center gap-3">
             <StatusBadge status={status} />
             <span className="font-mono text-xs text-muted-foreground">{config.auction_id}</span>
           </div>
 
-          {/* Revenue summary */}
-          {state.cleared && (
-            <Card variant="gradient" padding="sm">
-              <h4 className="mb-3 font-semibold text-foreground">Revenue Summary</h4>
-              <div className="grid grid-cols-2 gap-4">
-                <DataRow label="Total Revenue" value={<span className="text-xl font-bold text-primary">{state.creator_revenue.toLocaleString()}</span>} border={false} />
-                <DataRow label="Clearing Price" value={<span className="text-xl font-bold text-foreground">{state.clearing_price.toLocaleString()}</span>} border={false} />
-                <DataRow label="Withdrawn" value={withdrawn.toLocaleString()} border={false} />
-                <DataRow label="Remaining" value={<span className="font-medium text-success">{maxWithdrawable.toLocaleString()}</span>} border={false} />
-              </div>
-            </Card>
-          )}
+          {/* Revenue summary — self-contained component */}
+          <RevenuePanel
+            auctionId={config.auction_id}
+            config={config}
+            state={state}
+            refetchTrigger={txSuccess}
+          />
 
           {/* Close Auction */}
           <Card padding="sm">
@@ -141,14 +132,14 @@ export function CreatorDashboardPage() {
               </>
             ) : state.cleared ? (
               <p className="text-sm text-muted-foreground">
-                This auction has been closed. The clearing price is locked at{" "}
+                Closed at clearing price{" "}
                 <span className="font-medium text-foreground">{state.clearing_price.toLocaleString()}</span>.
               </p>
             ) : (
               <p className="text-sm text-muted-foreground">
                 {status === "upcoming"
-                  ? `Closing is available once the auction starts at block ${config.start_block.toLocaleString()}.`
-                  : `Closing becomes available once supply is fully met or the auction passes block ${config.end_block.toLocaleString()}.`}
+                  ? `Available once auction starts at block ${config.start_block.toLocaleString()}.`
+                  : `Available once supply is met or auction passes block ${config.end_block.toLocaleString()}.`}
               </p>
             )}
           </Card>
@@ -167,11 +158,7 @@ export function CreatorDashboardPage() {
                   placeholder={`Up to ${maxWithdrawable.toLocaleString()}`}
                 />
                 <TransactionButton
-                  onClick={() => executeTx(
-                    "withdraw_payments",
-                    [config.auction_id, `${paymentAmount}u128`, config.payment_token_id],
-                    "withdraw_payments",
-                  )}
+                  onClick={() => executeTx("withdraw_payments", [config.auction_id, `${paymentAmount}u128`], "withdraw_payments")}
                   loading={txLoading === "withdraw_payments"}
                   loadingText="Withdrawing..."
                   disabled={!paymentAmount || BigInt(paymentAmount || "0") <= 0n}
@@ -180,14 +167,10 @@ export function CreatorDashboardPage() {
                   Withdraw Payments
                 </TransactionButton>
               </div>
-            ) : state.cleared && maxWithdrawable === 0n ? (
-              <p className="text-sm text-muted-foreground">
-                All revenue has been withdrawn.
-              </p>
+            ) : state.cleared ? (
+              <p className="text-sm text-muted-foreground">All revenue has been withdrawn.</p>
             ) : (
-              <p className="text-sm text-muted-foreground">
-                Revenue becomes available to withdraw after the auction is closed and cleared.
-              </p>
+              <p className="text-sm text-muted-foreground">Available after the auction is closed and cleared.</p>
             )}
           </Card>
 
@@ -205,11 +188,7 @@ export function CreatorDashboardPage() {
                   placeholder={`Up to ${maxUnsold.toLocaleString()}`}
                 />
                 <TransactionButton
-                  onClick={() => executeTx(
-                    "withdraw_unsold",
-                    [config.auction_id, `${unsoldAmount}u128`, config.sale_token_id],
-                    "withdraw_unsold",
-                  )}
+                  onClick={() => executeTx("withdraw_unsold", [config.auction_id, `${unsoldAmount}u128`, config.sale_token_id], "withdraw_unsold")}
                   loading={txLoading === "withdraw_unsold"}
                   loadingText="Withdrawing..."
                   disabled={!unsoldAmount || BigInt(unsoldAmount || "0") <= 0n}
@@ -218,23 +197,19 @@ export function CreatorDashboardPage() {
                   Withdraw Unsold
                 </TransactionButton>
               </div>
-            ) : state.cleared && maxUnsold === 0n ? (
+            ) : state.cleared ? (
               <p className="text-sm text-muted-foreground">
                 {config.supply === state.total_committed
-                  ? "Supply was fully sold — no unsold tokens to recover."
+                  ? "Supply fully sold — no unsold tokens."
                   : "All unsold tokens have been withdrawn."}
               </p>
             ) : (
-              <p className="text-sm text-muted-foreground">
-                Unsold token recovery is available after the auction is closed.
-              </p>
+              <p className="text-sm text-muted-foreground">Available after the auction is closed.</p>
             )}
           </Card>
 
           {txError && <p className="text-sm text-destructive">{txError}</p>}
-          {txSuccess && (
-            <Alert variant="success" title="Transaction submitted successfully!" />
-          )}
+          {txSuccess && <Alert variant="success" title="Transaction submitted successfully!" />}
         </div>
       )}
     </div>

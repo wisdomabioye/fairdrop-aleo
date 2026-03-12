@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useWallet } from "@provablehq/aleo-wallet-adaptor-react";
-import { useRecords } from "@/shared/hooks/useRecords";
+import { useBidRecords } from "@/shared/hooks/useBidRecords";
 import { ConnectWalletPrompt } from "@/shared/components/ConnectWalletPrompt";
 import { Card } from "@/shared/components/ui/Card";
 import { Button } from "@/shared/components/ui/Button";
@@ -13,7 +13,7 @@ import { formatField } from "@/shared/utils/formatting";
 
 export function MyBidsPage() {
   const { address } = useWallet();
-  const { bidRecords, loading, fetchRecords } = useRecords();
+  const { bidRecords, loading, fetchRecords } = useBidRecords();
   const [showSpent, setShowSpent] = useState(false);
 
   const unspent = bidRecords.filter((b) => !b.spent);

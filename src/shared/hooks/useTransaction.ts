@@ -8,6 +8,8 @@ import type { ProgramFunction } from "@/constants";
 export type TxStatus = "idle" | "signing" | "submitted" | "error";
 
 interface UseTransactionOptions {
+  /** Override the target program (default: PROGRAM_ID / fairdrop.aleo) */
+  programId?: string;
   /** Defaults to false (public fee) */
   privateFee?: boolean;
   /** Override the human-readable label shown in the tracker widget */
@@ -42,13 +44,24 @@ export function useTransaction(options: UseTransactionOptions = {}) {
       setStatus("signing");
       setError(null);
       setTxId(null);
-      try {
-        const result = await executeTransaction({
-          program: PROGRAM_ID,
+      const isPortError = (e: unknown) =>
+        e instanceof Error && e.message.includes("Receiving end does not exist");
+
+      const attempt = () =>
+        executeTransaction({
+          program: optionsRef.current.programId ?? PROGRAM_ID,
           function: functionName,
           inputs,
           fee: FEE,
           privateFee: optionsRef.current.privateFee ?? false,
+        });
+
+      try {
+        let result = await attempt().catch(async (e) => {
+          // Shield extension port not yet ready — wait and retry once.
+          if (!isPortError(e)) throw e;
+          await new Promise((r) => setTimeout(r, 700));
+          return attempt();
         });
 
         if (!result) throw new Error("Transaction was not submitted");
@@ -59,7 +72,7 @@ export function useTransaction(options: UseTransactionOptions = {}) {
         // Register in the global tracker so the widget picks it up
         const label =
           optionsRef.current.label ??
-          TX_LABELS[functionName] ??
+          TX_LABELS[functionName as ProgramFunction] ??
           functionName;
         addTransaction(id, label);
 

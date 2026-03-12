@@ -1,3 +1,6 @@
+// Re-exported for backwards compatibility — import directly from token.ts in new code.
+export type { TokenRecord } from "@/shared/types/token";
+
 export interface AuctionConfig {
   auction_id: string;
   creator: string;
@@ -27,18 +30,6 @@ export interface AuctionState {
 export interface Stats {
   total_auctions: number;
   total_bids: number;
-}
-
-export interface TokenRecord {
-  /** Stable unique ID — the record commitment field element */
-  id: string;
-  owner: string;
-  token_id: string;
-  amount: bigint;
-  /** Locally marked as spent after a successful transaction (wallet indexer may lag) */
-  spent?: boolean;
-  /** Record plaintext string — passed directly as a transaction input */
-  _record: string;
 }
 
 export interface BidRecord {

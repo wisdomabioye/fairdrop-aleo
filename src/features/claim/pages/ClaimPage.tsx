@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useWallet } from "@provablehq/aleo-wallet-adaptor-react";
-import { useRecords } from "@/shared/hooks/useRecords";
+import { useBidRecords } from "@/shared/hooks/useBidRecords";
 import { useTransaction } from "@/shared/hooks/useTransaction";
 import { useAuction } from "@/features/auction/hooks/useAuction";
 import { ConnectWalletPrompt } from "@/shared/components/ConnectWalletPrompt";
@@ -14,7 +14,7 @@ import type { BidRecord } from "@/shared/types/auction";
 
 export function ClaimPage() {
   const { address } = useWallet();
-  const { bidRecords } = useRecords();
+  const { bidRecords } = useBidRecords();
   const [selectedBid, setSelectedBid] = useState<BidRecord | null>(null);
   const [success, setSuccess] = useState(false);
   const claimTx = useTransaction();
@@ -40,7 +40,6 @@ export function ClaimPage() {
       selectedBid._record,
       `${state.clearing_price}u128`,
       config.sale_token_id,
-      config.payment_token_id,
     ]);
     if (txId) {
       setSuccess(true);

@@ -39,6 +39,7 @@ const sections: NavSection[] = [
   {
     title: "Creator",
     items: [
+      { to: "/token-launch", label: "Token Launch", icon: Droplets },
       { to: "/auction/new", label: "Create Auction", icon: PlusCircle },
       { to: "/creator", label: "My Auctions", icon: Gavel, end: true },
     ],
@@ -53,8 +54,7 @@ const sections: NavSection[] = [
   {
     title: "Tools",
     items: [
-      { to: "/faucet", label: "Faucet", icon: Droplets },
-      { to: "/tokens", label: "Token Manager", icon: Layers },
+      { to: "/token-manager", label: "Token Manager", icon: Layers },
     ],
   },
   {

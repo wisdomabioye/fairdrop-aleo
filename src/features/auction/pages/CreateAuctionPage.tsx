@@ -2,32 +2,26 @@ import { useState, useMemo, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { CheckCircle2 } from "lucide-react";
 import { useBlockHeight } from "@/shared/hooks/useBlockHeight";
-import { useRecords } from "@/shared/hooks/useRecords";
+import { useTokenRecords } from "@/shared/hooks/useTokenRecords";
+import { useCreatorTokens } from "@/shared/hooks/useCreatorTokens";
+import { TokenPicker } from "@/shared/components/TokenPicker";
 import { useTransaction } from "@/shared/hooks/useTransaction";
 import { useLocalStorage } from "@/shared/hooks/useLocalStorage";
 import { TokenRecordSelector } from "@/shared/components/RecordSelector";
 import { TransactionButton } from "@/shared/components/TransactionButton";
 import { Card } from "@/shared/components/ui/Card";
 import { Input } from "@/shared/components/ui/Input";
-import { Select } from "@/shared/components/ui/Select";
+import { Alert } from "@/shared/components/ui/Alert";
 import { PageHeader } from "@/shared/components/ui/PageHeader";
+import { Spinner } from "@/shared/components/ui/Spinner";
 import { PriceChart } from "../components/PriceChart";
-import type { AuctionConfig, TokenRecord } from "@/shared/types/auction";
-import { TestPaymentTokens, TestAuctionTokens } from "@/constants";
+import { CREDITS_RESERVED_TOKEN_ID } from "@/shared/types/token";
+import type { AuctionConfig } from "@/shared/types/auction";
+import type { TokenRecord } from "@/shared/types/token";
 
-const paymentTokenOptions = TestPaymentTokens.map((t) => ({
-  value: t.tokenId,
-  label: `${t.name} (${t.symbol})`,
-}));
-
-const saleTokenOptions = TestAuctionTokens.map((t) => ({
-  value: t.tokenId,
-  label: `${t.name} (${t.symbol})`,
-}));
-
-// startBlock intentionally excluded — it must always reflect the live chain height
+// startBlock intentionally excluded — always reflects live chain height
 interface FormState {
-  paymentTokenId: string;
+  saleTokenId: string;
   startPrice: string;
   floorPrice: string;
   endBlock: string;
@@ -38,7 +32,7 @@ interface FormState {
 }
 
 const defaultForm: FormState = {
-  paymentTokenId: "",
+  saleTokenId: "",
   startPrice: "",
   floorPrice: "",
   endBlock: "",
@@ -51,44 +45,34 @@ const defaultForm: FormState = {
 export function CreateAuctionPage() {
   const navigate = useNavigate();
   const { blockHeight } = useBlockHeight();
-  const { tokenRecords } = useRecords();
-  const [saleTokenTypeId, setSaleTokenTypeId] = useLocalStorage("auction-draft-saleTokenType", "");
+  const { tokenRecords } = useTokenRecords();
+  const { creatorTokens, loading: tokensLoading } = useCreatorTokens();
   const [form, setForm, clearDraft] = useLocalStorage<FormState>("auction-draft-form", defaultForm);
-
-  // startBlock lives in local state only — never persisted so it stays current
   const [startBlock, setStartBlock] = useState("");
-  const [selectedToken, setSelectedToken] = useState<TokenRecord | null>(null);
+  const [selectedRecord, setSelectedRecord] = useState<TokenRecord | null>(null);
   const [submittedTxId, setSubmittedTxId] = useState<string | null>(null);
-
   const { execute, loading, status, error } = useTransaction();
 
-  // Always keep startBlock at blockHeight + 50 unless the user has edited it
   useEffect(() => {
     if (blockHeight > 0) {
-      setStartBlock((prev) => {
-        // Only auto-update if user hasn't typed a custom value yet
-        if (!prev) return String(blockHeight + 50);
-        return prev;
-      });
+      setStartBlock((prev) => (!prev ? String(blockHeight + 50) : prev));
     }
   }, [blockHeight]);
 
   const update = (key: keyof FormState) => (val: string) =>
     setForm((prev) => ({ ...prev, [key]: val }));
 
-  const handleSaleTokenTypeChange = (tokenId: string) => {
-    setSaleTokenTypeId(tokenId);
-    setSelectedToken(null);
-  };
-
   const handleClearDraft = () => {
     clearDraft();
-    setSaleTokenTypeId("");
-    setSelectedToken(null);
     setStartBlock("");
+    setSelectedRecord(null);
   };
 
-  // Build preview config for price chart
+  // Records in wallet matching the selected token type
+  const eligibleRecords = tokenRecords.filter(
+    (r) => r.token_id === form.saleTokenId && !r.spent,
+  );
+
   const previewConfig = useMemo<AuctionConfig | null>(() => {
     try {
       const startPrice = BigInt(form.startPrice || "0");
@@ -97,18 +81,20 @@ export function CreateAuctionPage() {
       const endBlock = Number(form.endBlock || "0");
       const priceDecayBlocks = Number(form.priceDecayBlocks || "0");
       const priceDecayAmount = BigInt(form.priceDecayAmount || "0");
+      const supply = selectedRecord?.amount ?? 0n;
       if (
         startPrice <= floorPrice ||
         endBlock <= sb ||
         priceDecayBlocks <= 0 ||
-        priceDecayAmount <= 0n
+        priceDecayAmount <= 0n ||
+        supply <= 0n
       ) return null;
       return {
         auction_id: "preview",
         creator: "",
-        sale_token_id: "",
-        payment_token_id: "",
-        supply: selectedToken ? selectedToken.amount : 0n,
+        sale_token_id: form.saleTokenId,
+        payment_token_id: CREDITS_RESERVED_TOKEN_ID,
+        supply,
         start_price: startPrice,
         floor_price: floorPrice,
         start_block: sb,
@@ -121,30 +107,30 @@ export function CreateAuctionPage() {
     } catch {
       return null;
     }
-  }, [form, startBlock, selectedToken]);
+  }, [form, startBlock, selectedRecord]);
 
   const validation = useMemo(() => {
-    if (!saleTokenTypeId) return "Select a sale token type";
-    if (!selectedToken) return "Select a sale token record to deposit";
-    if (!form.paymentTokenId) return "Select a payment token";
+    if (!form.saleTokenId) return "Select a sale token";
+    if (!selectedRecord) return "Select a token record to deposit";
     if (!form.startPrice || BigInt(form.startPrice || "0") <= 0n) return "Enter start price";
     if (!form.floorPrice || BigInt(form.floorPrice || "0") <= 0n) return "Enter floor price";
     if (BigInt(form.startPrice) <= BigInt(form.floorPrice)) return "Start price must exceed floor price";
     const sb = Number(startBlock || "0");
-    const endBlock = Number(form.endBlock || "0");
     if (sb <= 0) return "Enter start block";
-    if (endBlock <= sb) return "End block must exceed start block";
+    if (Number(form.endBlock || "0") <= sb) return "End block must exceed start block";
     if (Number(form.priceDecayBlocks || "0") <= 0) return "Enter decay interval";
     if (BigInt(form.priceDecayAmount || "0") <= 0n) return "Enter decay amount";
     if (BigInt(form.minBidAmount || "0") <= 0n) return "Enter minimum bid amount";
     return null;
-  }, [selectedToken, form, saleTokenTypeId, startBlock]);
+  }, [form, selectedRecord, startBlock]);
 
   const handleCreate = async () => {
-    if (!selectedToken || validation) return;
+    if (validation || !selectedRecord) return;
     const txId = await execute("create_auction", [
-      selectedToken._record,
-      form.paymentTokenId,
+      selectedRecord._record,               // private Token record — burned on-chain
+      form.saleTokenId,
+      CREDITS_RESERVED_TOKEN_ID,
+      `${selectedRecord.amount}u128`,       // supply = full record amount
       `${form.startPrice}u128`,
       `${form.floorPrice}u128`,
       `${startBlock}u32`,
@@ -156,12 +142,11 @@ export function CreateAuctionPage() {
     ]);
     if (txId) {
       clearDraft();
-      setSaleTokenTypeId("");
+      setSelectedRecord(null);
       setSubmittedTxId(txId);
     }
   };
 
-  // ── Success state — inline within the same layout ─────────────────────────
   if (submittedTxId) {
     return (
       <div className="mx-auto max-w-3xl space-y-8 animate-fade-in">
@@ -185,11 +170,7 @@ export function CreateAuctionPage() {
                 View My Auctions
               </button>
               <button
-                onClick={() => {
-                  setSubmittedTxId(null);
-                  setSelectedToken(null);
-                  setStartBlock("");
-                }}
+                onClick={() => { setSubmittedTxId(null); setStartBlock(""); }}
                 className="rounded-xl border border-border bg-card px-5 py-2.5 text-sm font-semibold text-foreground transition-all hover:bg-secondary"
               >
                 Create Another
@@ -201,11 +182,9 @@ export function CreateAuctionPage() {
     );
   }
 
-  const hasDraft =
-    saleTokenTypeId !== "" ||
-    (Object.keys(defaultForm) as (keyof FormState)[]).some(
-      (k) => form[k] !== defaultForm[k]
-    );
+  const hasDraft = (Object.keys(defaultForm) as (keyof FormState)[]).some(
+    (k) => form[k] !== defaultForm[k],
+  );
 
   return (
     <div className="mx-auto max-w-3xl space-y-8 animate-fade-in">
@@ -226,47 +205,54 @@ export function CreateAuctionPage() {
 
       <Card>
         <div className="space-y-6">
-          {/* Sale Token — pick type first, then pick the wallet record */}
-          <Select
-            label="Sale Token Type"
-            value={saleTokenTypeId}
-            onChange={(e) => handleSaleTokenTypeChange(e.target.value)}
-            options={saleTokenOptions}
-            placeholder="Select sale token type…"
-            hint="The token you are auctioning off"
-          />
-          {saleTokenTypeId && (
+          {/* Step 1: Pick sale token type */}
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-foreground">Sale Token</p>
+            {tokensLoading ? (
+              <Spinner size="sm" />
+            ) : creatorTokens.length === 0 ? (
+              <Alert variant="warning" title="No token records in wallet">
+                Mint tokens first, then complete Token Launch Step 3 (Authorize) to grant
+                SUPPLY_MANAGER_ROLE to the auction contract.{" "}
+                <Link to="/token-launch" className="underline">Go to Token Launch.</Link>
+              </Alert>
+            ) : (
+              <TokenPicker
+                tokens={creatorTokens}
+                selectedId={form.saleTokenId}
+                onSelect={(id) => { update("saleTokenId")(id); setSelectedRecord(null); }}
+              />
+            )}
+          </div>
+
+          {/* Step 2: Pick the record to deposit — supply = record.amount */}
+          {form.saleTokenId && (
             <>
               <TokenRecordSelector
-                records={tokenRecords}
-                selected={selectedToken}
-                onSelect={setSelectedToken}
-                label="Sale Token Record (deposited into escrow)"
-                filterTokenId={saleTokenTypeId}
+                records={eligibleRecords}
+                selected={selectedRecord}
+                onSelect={setSelectedRecord}
+                label="Token Record to Deposit (becomes auction supply)"
+                filterTokenId={form.saleTokenId}
               />
-              {!tokenRecords.some((r) => r.token_id === saleTokenTypeId && !r.spent) && (
+              {selectedRecord && (
                 <p className="text-xs text-muted-foreground">
-                  No records for this token?{" "}
-                  <Link to="/faucet" className="text-primary hover:underline">
-                    Mint some from the faucet.
-                  </Link>
+                  Auction supply: <span className="font-medium text-foreground">{selectedRecord.amount.toLocaleString()} tokens</span>
+                  {" — "}the record will be burned on-chain and re-minted to winners at claim time.
+                </p>
+              )}
+              {eligibleRecords.length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  No records for this token.{" "}
+                  <Link to="/token-launch" className="text-primary hover:underline">Mint some first.</Link>
                 </p>
               )}
             </>
           )}
 
-          <Select
-            label="Payment Token"
-            value={form.paymentTokenId}
-            onChange={(e) => update("paymentTokenId")(e.target.value)}
-            options={paymentTokenOptions}
-            placeholder="Select payment token…"
-            hint="Token that bidders will pay with"
-          />
-
           <div className="grid gap-4 sm:grid-cols-2">
-            <Input label="Start Price" value={form.startPrice} onChange={(e) => update("startPrice")(e.target.value)} placeholder="e.g. 1000" />
-            <Input label="Floor Price" value={form.floorPrice} onChange={(e) => update("floorPrice")(e.target.value)} placeholder="e.g. 100" />
+            <Input label="Start Price (µALEO)" value={form.startPrice} onChange={(e) => update("startPrice")(e.target.value.replace(/[^0-9]/g, ""))} placeholder="e.g. 1000000" hint="Microcredits per token at open" />
+            <Input label="Floor Price (µALEO)" value={form.floorPrice} onChange={(e) => update("floorPrice")(e.target.value.replace(/[^0-9]/g, ""))} placeholder="e.g. 100000" hint="Minimum price, never drops below" />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -275,24 +261,27 @@ export function CreateAuctionPage() {
               value={startBlock}
               onChange={(e) => setStartBlock(e.target.value.replace(/[^0-9]/g, ""))}
               placeholder={blockHeight > 0 ? `Current: ${blockHeight}` : "Loading…"}
-              hint="Not saved in draft — always reflects current chain height"
+              hint="Not saved in draft — always reflects current height"
             />
-            <Input label="End Block" value={form.endBlock} onChange={(e) => update("endBlock")(e.target.value)} placeholder="e.g. 10000" />
+            <Input label="End Block" value={form.endBlock} onChange={(e) => update("endBlock")(e.target.value.replace(/[^0-9]/g, ""))} placeholder="e.g. 10000" />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <Input label="Decay Interval (blocks)" value={form.priceDecayBlocks} onChange={(e) => update("priceDecayBlocks")(e.target.value)} placeholder="e.g. 100" hint="Price drops every N blocks" />
-            <Input label="Decay Amount" value={form.priceDecayAmount} onChange={(e) => update("priceDecayAmount")(e.target.value)} placeholder="e.g. 10" hint="How much price drops each step" />
+            <Input label="Decay Interval (blocks)" value={form.priceDecayBlocks} onChange={(e) => update("priceDecayBlocks")(e.target.value.replace(/[^0-9]/g, ""))} placeholder="e.g. 100" hint="Price drops every N blocks" />
+            <Input label="Decay Amount (µALEO)" value={form.priceDecayAmount} onChange={(e) => update("priceDecayAmount")(e.target.value.replace(/[^0-9]/g, ""))} placeholder="e.g. 10000" hint="µALEO reduction per step" />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <Input label="Min Bid Amount" value={form.minBidAmount} onChange={(e) => update("minBidAmount")(e.target.value)} placeholder="e.g. 1" />
-            <Input label="Max Bid Amount" value={form.maxBidAmount} onChange={(e) => update("maxBidAmount")(e.target.value)} placeholder="0 = unlimited" hint="Per-bidder cap (0 = no limit)" />
+            <Input label="Min Bid Amount" value={form.minBidAmount} onChange={(e) => update("minBidAmount")(e.target.value.replace(/[^0-9]/g, ""))} placeholder="e.g. 1" />
+            <Input label="Max Bid Amount" value={form.maxBidAmount} onChange={(e) => update("maxBidAmount")(e.target.value.replace(/[^0-9]/g, ""))} placeholder="0 = unlimited" hint="Per-bidder cap (0 = no limit)" />
           </div>
+
+          <Alert variant="info" title="Payment token">
+            All bids are paid in ALEO Credits (private or public). Bidders choose their privacy level when placing bids.
+          </Alert>
         </div>
       </Card>
 
-      {/* Price preview */}
       {previewConfig && (
         <div>
           <h3 className="mb-3 text-lg font-semibold text-foreground">Price Preview</h3>

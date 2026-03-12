@@ -10,10 +10,10 @@ import { AuctionDetailPage } from "./features/auction/pages/AuctionDetailPage";
 import { CreateAuctionPage } from "./features/auction/pages/CreateAuctionPage";
 import { MyAuctionsPage } from "./features/creator/pages/MyAuctionsPage";
 import { MyBidsPage } from "./features/bids/pages/MyBidsPage";
-import { FaucetPage } from "./features/faucet/pages/FaucetPage";
 import { ClaimPage } from "./features/claim/pages/ClaimPage";
 import { CreatorDashboardPage } from "./features/creator/pages/CreatorDashboardPage";
-import { TokenManagerPage } from "./features/tokens/pages/TokenManagerPage";
+import { TokenManagerPage } from "./features/token-manager/pages/TokenManagerPage";
+import { TokenLaunchPage } from "./features/token-launch/pages/TokenLaunchPage";
 import { GuidePage } from "./features/guide/pages/GuidePage";
 
 function Root() {
@@ -29,8 +29,9 @@ function Root() {
               <Route path="creator/manage" element={<CreatorDashboardPage />} />
               <Route path="bids" element={<MyBidsPage />} />
               <Route path="claim" element={<ClaimPage />} />
-              <Route path="faucet" element={<FaucetPage />} />
-              <Route path="tokens" element={<TokenManagerPage />} />
+              <Route path="token-manager" element={<TokenManagerPage />} />
+              <Route path="token-launch" element={<TokenLaunchPage />} />
+              {/* Legacy redirect */}
               <Route path="guide" element={<GuidePage />} />
             </Route>
           </Routes>
