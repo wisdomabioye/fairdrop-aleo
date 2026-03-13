@@ -1,9 +1,11 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { fetchTokenMetadata } from "@/shared/lib/tokenRegistry";
 import type { TokenMetadata } from "@/shared/types/token";
 
 /**
  * Fetch and cache TokenMetadata for one or more token IDs.
+ * Cache is module-level — shared across all hook instances so each
+ * token ID is fetched at most once per page load.
  *
  * Usage — single token:
  *   const { metadata, loading } = useTokenMetadata(tokenId);
@@ -11,6 +13,28 @@ import type { TokenMetadata } from "@/shared/types/token";
  * Usage — multiple tokens:
  *   const { metadataMap, loading } = useTokenMetadata(tokenIds);
  */
+
+// Module-level cache: tokenId → TokenMetadata (shared across all consumers)
+const globalCache = new Map<string, TokenMetadata>();
+
+// In-flight fetch promises to deduplicate concurrent requests for the same ID
+const inflight = new Map<string, Promise<TokenMetadata | null>>();
+
+function fetchOnce(tokenId: string): Promise<TokenMetadata | null> {
+  const cached = globalCache.get(tokenId);
+  if (cached) return Promise.resolve(cached);
+
+  let pending = inflight.get(tokenId);
+  if (!pending) {
+    pending = fetchTokenMetadata(tokenId).then((m) => {
+      inflight.delete(tokenId);
+      if (m) globalCache.set(tokenId, m);
+      return m;
+    });
+    inflight.set(tokenId, pending);
+  }
+  return pending;
+}
 
 // ── Single token overload ────────────────────────────────────────────────────
 
@@ -40,8 +64,7 @@ export function useTokenMetadata(
 } {
   const isArray = Array.isArray(input);
 
-  // Stabilize array input: serialize to a string so the effect only re-runs
-  // when the actual IDs change, not on every render (new array reference).
+  // Stabilize array input so the effect only re-runs when actual IDs change.
   const stableKey = isArray
     ? (input as string[]).slice().sort().join("\n")
     : (input ?? "");
@@ -49,9 +72,6 @@ export function useTokenMetadata(
   const [metadata, setMetadata] = useState<TokenMetadata | null>(null);
   const [metadataMap, setMetadataMap] = useState<Map<string, TokenMetadata>>(new Map());
   const [loading, setLoading] = useState(false);
-
-  // Cache: tokenId → TokenMetadata (lives for the lifetime of this hook instance)
-  const cache = useRef<Map<string, TokenMetadata>>(new Map());
 
   const [revision, setRevision] = useState(0);
 
@@ -64,33 +84,18 @@ export function useTokenMetadata(
       try {
         if (isArray) {
           const ids = stableKey.split("\n").filter(Boolean);
-          const uncached = ids.filter((id) => !cache.current.has(id));
-
-          if (uncached.length > 0) {
-            const results = await Promise.all(uncached.map((id) => fetchTokenMetadata(id)));
-            uncached.forEach((id, i) => {
-              if (results[i]) cache.current.set(id, results[i]!);
-            });
-          }
+          await Promise.all(ids.map((id) => fetchOnce(id)));
 
           if (cancelled) return;
           const next = new Map<string, TokenMetadata>();
           for (const id of ids) {
-            const m = cache.current.get(id);
+            const m = globalCache.get(id);
             if (m) next.set(id, m);
           }
           setMetadataMap(next);
         } else {
-          const id = stableKey;
-          if (cache.current.has(id)) {
-            if (!cancelled) setMetadata(cache.current.get(id)!);
-          } else {
-            const m = await fetchTokenMetadata(id);
-            if (!cancelled) {
-              if (m) cache.current.set(id, m);
-              setMetadata(m);
-            }
-          }
+          const m = await fetchOnce(stableKey);
+          if (!cancelled) setMetadata(m);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -102,7 +107,8 @@ export function useTokenMetadata(
   }, [stableKey, isArray, revision]);
 
   const refresh = useCallback(() => {
-    cache.current.clear();
+    globalCache.clear();
+    inflight.clear();
     setRevision((r) => r + 1);
   }, []);
 

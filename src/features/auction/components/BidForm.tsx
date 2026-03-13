@@ -4,7 +4,9 @@ import { Shield, Eye } from "lucide-react";
 import type { AuctionConfig } from "@/shared/types/auction";
 import type { CreditRecord } from "@/shared/types/token";
 import { useTransaction } from "@/shared/hooks/useTransaction";
+import { useTokenMetadata } from "@/shared/hooks/useTokenMetadata";
 import { TransactionButton } from "@/shared/components/TransactionButton";
+import { DropdownSelect } from "@/shared/components/ui/DropdownSelect";
 import { Card } from "@/shared/components/ui/Card";
 import { Input } from "@/shared/components/ui/Input";
 import { Alert } from "@/shared/components/ui/Alert";
@@ -23,6 +25,11 @@ export function BidForm({ config, currentPrice, creditRecords }: Props) {
   const privateTx = useTransaction();
   const publicTx = useTransaction();
   const tx = mode === "private" ? privateTx : publicTx;
+
+  const { metadata: saleMeta } = useTokenMetadata(config.sale_token_id);
+  const { metadata: payMeta } = useTokenMetadata(config.payment_token_id);
+  const saleSymbol = saleMeta?.symbolStr ?? null;
+  const paySymbol = payMeta?.symbolStr ?? "µ";
 
   const qty = BigInt(quantity || "0");
   const totalCost = qty * currentPrice;   // microcredits
@@ -95,57 +102,52 @@ export function BidForm({ config, currentPrice, creditRecords }: Props) {
         </Alert>
 
         <Input
-          label="Quantity"
+          label={`Quantity${saleSymbol ? ` (${saleSymbol})` : ""}`}
           value={quantity}
           onChange={(e) => setQuantity(e.target.value.replace(/[^0-9]/g, ""))}
           placeholder={`Min: ${config.min_bid_amount.toLocaleString()}`}
         />
 
-        {/* Private: record selector */}
+        {/* Private: credit record selector */}
         {mode === "private" && (
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-foreground">Credits Record</p>
-            {unspentRecords.length === 0 ? (
-              <p className="text-xs text-muted-foreground">
-                No credits records found.{" "}
-                <Link to="/faucet" className="text-primary hover:underline">
-                  Get credits from faucet.
-                </Link>
-              </p>
-            ) : (
-              <div className="space-y-1.5 max-h-40 overflow-y-auto">
-                {unspentRecords.map((r) => (
-                  <button
-                    key={r.id}
-                    onClick={() => setSelectedRecord(r)}
-                    className={`w-full rounded-xl border px-3 py-2 text-left text-xs transition-colors ${
-                      selectedRecord?.id === r.id
-                        ? "border-primary bg-primary/10"
-                        : "border-border hover:border-primary/40"
-                    }`}
-                  >
-                    <span className="font-medium text-foreground">
-                      {r.microcredits.toLocaleString()} µALEO
-                    </span>
-                  </button>
-                ))}
-              </div>
+          <DropdownSelect
+            items={unspentRecords}
+            selected={selectedRecord}
+            getId={(r) => r.id}
+            onSelect={setSelectedRecord}
+            label="Credits Record"
+            placeholder="Pick a credits record…"
+            emptyText="No credits records found."
+            emptyHint={
+              <Link to="/faucet" className="text-xs text-primary hover:underline">
+                Get credits from faucet.
+              </Link>
+            }
+            renderTrigger={(r) => (
+              <span className="text-sm font-medium text-foreground">
+                {r.microcredits.toLocaleString()} µALEO
+              </span>
             )}
-          </div>
+            renderOption={(r) => (
+              <span className="flex-1 text-sm">
+                {r.microcredits.toLocaleString()} µALEO
+              </span>
+            )}
+          />
         )}
 
         {qty > 0n && (
           <div className="rounded-xl bg-secondary p-4">
-            <DataRow label="Price per token (µALEO)" value={currentPrice.toLocaleString()} border={false} />
+            <DataRow label={`Price per token (${paySymbol})`} value={currentPrice.toLocaleString()} border={false} />
             <DataRow
-              label="Total cost (µALEO)"
+              label={`Total cost (${paySymbol})`}
               value={<span className="font-semibold text-primary">{totalCost.toLocaleString()}</span>}
               border={false}
             />
             {mode === "private" && selectedRecord && (
               <DataRow
                 label="Change returned"
-                value={(selectedRecord.microcredits - totalCost).toLocaleString()}
+                value={`${(selectedRecord.microcredits - totalCost).toLocaleString()} µALEO`}
                 border={false}
               />
             )}
