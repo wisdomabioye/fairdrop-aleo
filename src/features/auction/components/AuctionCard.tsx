@@ -1,8 +1,9 @@
 import { Link } from "react-router-dom";
 import type { AuctionConfig, AuctionStatus } from "@/shared/types/auction";
 import { StatusBadge } from "./StatusBadge";
-import { formatField, formatAmount } from "@/shared/utils/formatting";
+import { formatField, formatAmount, formatTokenAmount } from "@/shared/utils/formatting";
 import { CREDITS_DECIMALS } from "@/shared/types/token";
+import { useTokenMetadata } from "@/shared/hooks/useTokenMetadata";
 import { AppRoutes } from "@/config/app.route";
 
 interface Props {
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export function AuctionCard({ config, status, currentPrice }: Props) {
+  const { metadata: saleMeta } = useTokenMetadata(config.sale_token_id);
   const isActive = status === "active" || status === "ending";
 
   return (
@@ -31,7 +33,7 @@ export function AuctionCard({ config, status, currentPrice }: Props) {
       <div className="mb-4 grid grid-cols-2 gap-3">
         <div>
           <p className="text-xs text-muted-foreground">Supply</p>
-          <p className="text-lg font-semibold text-foreground">{config.supply.toLocaleString()}</p>
+          <p className="text-lg font-semibold text-foreground">{formatTokenAmount(config.supply, saleMeta)}</p>
         </div>
         <div className="text-right">
           <p className="text-xs text-muted-foreground">Current Price</p>

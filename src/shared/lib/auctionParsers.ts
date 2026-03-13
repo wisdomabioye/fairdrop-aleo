@@ -18,6 +18,7 @@ export function parseAuctionConfig(text: string): AuctionConfig {
     price_decay_amount: parseU128(p["price_decay_amount"] ?? "0u128"),
     max_bid_amount: parseU128(p["max_bid_amount"] ?? "0u128"),
     min_bid_amount: parseU128(p["min_bid_amount"] ?? "0u128"),
+    sale_scale: p["sale_scale"] ? parseU128(p["sale_scale"]) : undefined,
   };
 }
 
