@@ -8,9 +8,9 @@ import {
   Droplets,
   Layers,
   BookOpen,
-  Zap,
   type LucideIcon,
 } from "lucide-react";
+import fairdropLogo from "@/assets/fairdrop.svg"
 
 interface SidebarProps {
   open: boolean;
@@ -131,9 +131,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
       >
         {/* Logo */}
         <div className="flex h-14 items-center gap-2.5 border-b border-sidebar-border px-4">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
-            <Zap className="h-4 w-4 text-primary" strokeWidth={2.5} />
-          </div>
+          <img src={fairdropLogo} alt="Fairdrop" className="h-8 w-8" />
           <NavLink
             to="/"
             onClick={onClose}
