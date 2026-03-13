@@ -15,6 +15,7 @@ export interface AuctionConfig {
   price_decay_amount: bigint;
   max_bid_amount: bigint;
   min_bid_amount: bigint;
+  sale_scale?: bigint;
 }
 
 export interface AuctionState {

@@ -1,6 +1,6 @@
 
 export type ProgramFunction =
-  // fairdrop_v3.aleo
+  // fairdrop_v4.aleo
   | "create_auction" | "place_bid_private" | "place_bid_public" | "claim"
   | "close_auction" | "withdraw_payments" | "withdraw_unsold"
   // token_registry.aleo

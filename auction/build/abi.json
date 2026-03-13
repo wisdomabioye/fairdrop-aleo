@@ -1,5 +1,5 @@
 {
-  "program": "fairdrop_v3.aleo",
+  "program": "fairdrop_v4.aleo",
   "structs": [
     {
       "path": [
@@ -96,6 +96,14 @@
         },
         {
           "name": "min_bid_amount",
+          "ty": {
+            "Primitive": {
+              "UInt": "U128"
+            }
+          }
+        },
+        {
+          "name": "sale_scale",
           "ty": {
             "Primitive": {
               "UInt": "U128"
@@ -247,7 +255,7 @@
           "path": [
             "AuctionConfig"
           ],
-          "program": "fairdrop_v3"
+          "program": "fairdrop_v4"
         }
       }
     },
@@ -261,7 +269,7 @@
           "path": [
             "AuctionState"
           ],
-          "program": "fairdrop_v3"
+          "program": "fairdrop_v4"
         }
       }
     },
@@ -330,7 +338,7 @@
           "path": [
             "Stats"
           ],
-          "program": "fairdrop_v3"
+          "program": "fairdrop_v4"
         }
       }
     },
@@ -509,6 +517,17 @@
             }
           },
           "mode": "Public"
+        },
+        {
+          "name": "sale_scale",
+          "ty": {
+            "Plaintext": {
+              "Primitive": {
+                "UInt": "U128"
+              }
+            }
+          },
+          "mode": "Public"
         }
       ],
       "outputs": [
@@ -595,7 +614,7 @@
               "path": [
                 "Bid"
               ],
-              "program": "fairdrop_v3"
+              "program": "fairdrop_v4"
             }
           },
           "mode": "None"
@@ -649,7 +668,7 @@
               "path": [
                 "Bid"
               ],
-              "program": "fairdrop_v3"
+              "program": "fairdrop_v4"
             }
           },
           "mode": "None"
@@ -692,7 +711,7 @@
               "path": [
                 "Bid"
               ],
-              "program": "fairdrop_v3"
+              "program": "fairdrop_v4"
             }
           },
           "mode": "None"
@@ -713,6 +732,17 @@
           "ty": {
             "Plaintext": {
               "Primitive": "Field"
+            }
+          },
+          "mode": "Public"
+        },
+        {
+          "name": "sale_scale",
+          "ty": {
+            "Plaintext": {
+              "Primitive": {
+                "UInt": "U128"
+              }
             }
           },
           "mode": "Public"

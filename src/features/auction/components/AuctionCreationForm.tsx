@@ -113,6 +113,7 @@ export function AuctionCreationForm({ address: _address }: AuctionCreationFormPr
         price_decay_amount: priceDecayAmount,
         max_bid_amount: parseTokenAmount(form.maxBidAmount, saleDecimals),
         min_bid_amount: parseTokenAmount(form.minBidAmount, saleDecimals),
+        sale_scale: 10n ** BigInt(saleDecimals),
       };
     } catch {
       return null;
@@ -121,6 +122,7 @@ export function AuctionCreationForm({ address: _address }: AuctionCreationFormPr
 
   const validation = useMemo(() => {
     if (!form.saleTokenId) return "Select a sale token";
+    if (form.saleTokenId && !saleMeta) return "Loading token metadata…";
     if (!selectedRecord) return "Select a token record to deposit";
     const sp = parseTokenAmount(form.startPrice, CREDITS_DECIMALS);
     const fp = parseTokenAmount(form.floorPrice, CREDITS_DECIMALS);
@@ -132,26 +134,38 @@ export function AuctionCreationForm({ address: _address }: AuctionCreationFormPr
     if (Number(form.endBlock || "0") <= sb) return "End block must exceed start block";
     if (Number(form.priceDecayBlocks || "0") <= 0) return "Enter decay interval";
     if (parseTokenAmount(form.priceDecayAmount, CREDITS_DECIMALS) <= 0n) return "Enter decay amount";
-    if (parseTokenAmount(form.minBidAmount, saleDecimals) <= 0n) return "Enter minimum bid amount";
+    const rawMinBid = parseTokenAmount(form.minBidAmount, saleDecimals);
+    if (rawMinBid <= 0n) return "Enter minimum bid amount";
+    if (rawMinBid > selectedRecord.amount) return "Min bid exceeds auction supply";
+    const rawMaxBid = parseTokenAmount(form.maxBidAmount, saleDecimals);
+    if (rawMaxBid > 0n && rawMaxBid < rawMinBid) return "Max bid must be ≥ min bid";
     return null;
-  }, [form, selectedRecord, startBlock, saleDecimals]);
+  }, [form, selectedRecord, startBlock, saleDecimals, saleMeta]);
 
   const handleCreate = async () => {
     if (validation || !selectedRecord) return;
+
+    const rawStartPrice = parseTokenAmount(form.startPrice, CREDITS_DECIMALS);
+    const rawFloorPrice = parseTokenAmount(form.floorPrice, CREDITS_DECIMALS);
+    const rawDecayAmount = parseTokenAmount(form.priceDecayAmount, CREDITS_DECIMALS);
+    const rawMinBid = parseTokenAmount(form.minBidAmount, saleDecimals);
+    const rawMaxBid = parseTokenAmount(form.maxBidAmount, saleDecimals);
+    const saleScale = 10n ** BigInt(saleDecimals);
 
     const auctionCreateParams = [
       selectedRecord._record,
       form.saleTokenId,
       CREDITS_RESERVED_TOKEN_ID,
       `${selectedRecord.amount}u128`,
-      `${form.startPrice}u128`,
-      `${form.floorPrice}u128`,
+      `${rawStartPrice}u128`,
+      `${rawFloorPrice}u128`,
       `${startBlock}u32`,
       `${form.endBlock}u32`,
       `${form.priceDecayBlocks}u32`,
-      `${form.priceDecayAmount}u128`,
-      `${form.maxBidAmount}u128`,
-      `${form.minBidAmount}u128`,
+      `${rawDecayAmount}u128`,
+      `${rawMaxBid}u128`,
+      `${rawMinBid}u128`,
+      `${saleScale}u128`,
     ];
     console.log(auctionCreateParams);
     const txId = await execute("create_auction", auctionCreateParams);

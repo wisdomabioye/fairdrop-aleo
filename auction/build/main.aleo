@@ -1,6 +1,6 @@
 import credits.aleo;
 import token_registry.aleo;
-program fairdrop_v3.aleo;
+program fairdrop_v4.aleo;
 
 record Bid:
     owner as address.private;
@@ -26,6 +26,7 @@ struct AuctionConfig:
     price_decay_amount as u128;
     max_bid_amount as u128;
     min_bid_amount as u128;
+    sale_scale as u128;
 
 struct AuctionState:
     total_committed as u128;
@@ -110,15 +111,16 @@ function create_auction:
     input r9 as u128.public;
     input r10 as u128.public;
     input r11 as u128.public;
-    gt r3 0u128 into r12;
-    assert.eq r12 true;
-    gte r0.amount r3 into r13;
+    input r12 as u128.public;
+    gt r3 0u128 into r13;
     assert.eq r13 true;
+    gte r0.amount r3 into r14;
+    assert.eq r14 true;
     assert.eq r0.token_id r1;
-    call token_registry.aleo/burn_private r0 r3 into r14 r15;
-    async create_auction r15 self.signer r1 r3 r2 r4 r5 r6 r7 r8 r9 r10 r11 into r16;
-    output r14 as token_registry.aleo/Token.record;
-    output r16 as fairdrop_v3.aleo/create_auction.future;
+    call token_registry.aleo/burn_private r0 r3 into r15 r16;
+    async create_auction r16 self.signer r1 r3 r2 r4 r5 r6 r7 r8 r9 r10 r11 r12 into r17;
+    output r15 as token_registry.aleo/Token.record;
+    output r17 as fairdrop_v4.aleo/create_auction.future;
 
 finalize create_auction:
     input r0 as token_registry.aleo/burn_private.future;
@@ -134,54 +136,55 @@ finalize create_auction:
     input r10 as u128.public;
     input r11 as u128.public;
     input r12 as u128.public;
+    input r13 as u128.public;
     await r0;
     assert.eq r4 3443843282313283355522573239085696902919850365217539366784739393210722344986field;
-    is.neq r2 3443843282313283355522573239085696902919850365217539366784739393210722344986field into r13;
-    assert.eq r13 true;
-    gte r7 block.height into r14;
+    is.neq r2 3443843282313283355522573239085696902919850365217539366784739393210722344986field into r14;
     assert.eq r14 true;
-    gt r6 0u128 into r15;
+    gte r7 block.height into r15;
     assert.eq r15 true;
-    gt r5 r6 into r16;
+    gt r6 0u128 into r16;
     assert.eq r16 true;
-    gt r8 r7 into r17;
+    gt r5 r6 into r17;
     assert.eq r17 true;
-    gt r9 0u32 into r18;
+    gt r8 r7 into r18;
     assert.eq r18 true;
-    gt r10 0u128 into r19;
+    gt r9 0u32 into r19;
     assert.eq r19 true;
-    gt r3 0u128 into r20;
+    gt r10 0u128 into r20;
     assert.eq r20 true;
-    gt r12 0u128 into r21;
+    gt r3 0u128 into r21;
     assert.eq r21 true;
-    is.eq r11 0u128 into r22;
-    gte r11 r12 into r23;
-    or r22 r23 into r24;
-    assert.eq r24 true;
-    cast fairdrop_v3.aleo r2 into r25 as TokenOwner;
-    hash.bhp256 r25 into r26 as field;
-    get.or_use token_registry.aleo/roles[r26] 0u8 into r27;
-    is.eq r27 3u8 into r28;
-    assert.eq r28 true;
-    cast 0u64 0u64 0u128 into r29 as Stats;
-    get.or_use stats[0field] r29 into r30;
-    cast r1 r30.total_auctions into r31 as AuctionKey;
-    hash.bhp256 r31 into r32 as field;
-    cast r32 r1 r2 r4 r3 r5 r6 r7 r8 r9 r10 r11 r12 into r33 as AuctionConfig;
-    set r33 into auction_configs[r32];
-    cast 0u128 0u128 false 0u32 false 0u128 0u128 into r34 as AuctionState;
-    set r34 into auction_states[r32];
-    set r3 into escrow_sales[r32];
-    set r32 into auction_index[r30.total_auctions];
-    get.or_use creator_auction_count[r1] 0u64 into r35;
-    add r35 1u64 into r36;
-    set r36 into creator_auction_count[r1];
-    get.or_use creator_latest_auction[r1] 0field into r37;
-    set r37 into auction_prev_by_creator[r32];
-    set r32 into creator_latest_auction[r1];
-    add r30.total_auctions 1u64 into r38;
-    cast r38 r30.total_bids r30.total_payment_collected into r39 as Stats;
-    set r39 into stats[0field];
+    gt r12 0u128 into r22;
+    assert.eq r22 true;
+    is.eq r11 0u128 into r23;
+    gte r11 r12 into r24;
+    or r23 r24 into r25;
+    assert.eq r25 true;
+    cast fairdrop_v4.aleo r2 into r26 as TokenOwner;
+    hash.bhp256 r26 into r27 as field;
+    get.or_use token_registry.aleo/roles[r27] 0u8 into r28;
+    is.eq r28 3u8 into r29;
+    assert.eq r29 true;
+    cast 0u64 0u64 0u128 into r30 as Stats;
+    get.or_use stats[0field] r30 into r31;
+    cast r1 r31.total_auctions into r32 as AuctionKey;
+    hash.bhp256 r32 into r33 as field;
+    cast r33 r1 r2 r4 r3 r5 r6 r7 r8 r9 r10 r11 r12 r13 into r34 as AuctionConfig;
+    set r34 into auction_configs[r33];
+    cast 0u128 0u128 false 0u32 false 0u128 0u128 into r35 as AuctionState;
+    set r35 into auction_states[r33];
+    set r3 into escrow_sales[r33];
+    set r33 into auction_index[r31.total_auctions];
+    get.or_use creator_auction_count[r1] 0u64 into r36;
+    add r36 1u64 into r37;
+    set r37 into creator_auction_count[r1];
+    get.or_use creator_latest_auction[r1] 0field into r38;
+    set r38 into auction_prev_by_creator[r33];
+    set r33 into creator_latest_auction[r1];
+    add r31.total_auctions 1u64 into r39;
+    cast r39 r31.total_bids r31.total_payment_collected into r40 as Stats;
+    set r40 into stats[0field];
 
 function place_bid_private:
     input r0 as credits.aleo/credits.record;
@@ -192,7 +195,7 @@ function place_bid_private:
     assert.eq r4 true;
     gt r3 0u64 into r5;
     assert.eq r5 true;
-    call credits.aleo/transfer_private_to_public r0 fairdrop_v3.aleo r3 into r6 r7;
+    call credits.aleo/transfer_private_to_public r0 fairdrop_v4.aleo r3 into r6 r7;
     cast r3 into r8 as u128;
     cast self.signer r1 r2 r8 into r9 as Bid.record;
     cast self.signer r1 into r10 as BidderKey;
@@ -201,7 +204,7 @@ function place_bid_private:
     async place_bid_private r7 r1 r11 r2 r12 into r13;
     output r6 as credits.aleo/credits.record;
     output r9 as Bid.record;
-    output r13 as fairdrop_v3.aleo/place_bid_private.future;
+    output r13 as fairdrop_v4.aleo/place_bid_private.future;
 
 finalize place_bid_private:
     input r0 as credits.aleo/transfer_private_to_public.future;
@@ -228,35 +231,36 @@ finalize place_bid_private:
     lt r14 r15 into r16;
     sub r5.start_price r14 into r17;
     ternary r16 r17 r5.floor_price into r18;
-    mul r3 r18 into r19;
-    gte r4 r19 into r20;
-    assert.eq r20 true;
-    gte r3 r5.min_bid_amount into r21;
+    mul r4 r5.sale_scale into r19;
+    mul r3 r18 into r20;
+    gte r19 r20 into r21;
     assert.eq r21 true;
-    add r6.total_committed r3 into r22;
-    lte r22 r5.supply into r23;
-    assert.eq r23 true;
-    get.or_use bid_totals[r2] 0u128 into r24;
-    add r24 r3 into r25;
-    is.eq r5.max_bid_amount 0u128 into r26;
-    lte r25 r5.max_bid_amount into r27;
-    or r26 r27 into r28;
-    assert.eq r28 true;
-    set r25 into bid_totals[r2];
-    add r6.total_committed r3 into r29;
-    gte r29 r5.supply into r30;
-    add r6.total_payments r4 into r31;
-    ternary r30 block.height r6.ended_at_block into r32;
-    cast r29 r31 r30 r32 false 0u128 0u128 into r33 as AuctionState;
-    set r33 into auction_states[r1];
-    get.or_use escrow_payments[r1] 0u128 into r34;
-    add r34 r4 into r35;
-    set r35 into escrow_payments[r1];
-    get stats[0field] into r36;
-    add r36.total_bids 1u64 into r37;
-    add r36.total_payment_collected r4 into r38;
-    cast r36.total_auctions r37 r38 into r39 as Stats;
-    set r39 into stats[0field];
+    gte r3 r5.min_bid_amount into r22;
+    assert.eq r22 true;
+    add r6.total_committed r3 into r23;
+    lte r23 r5.supply into r24;
+    assert.eq r24 true;
+    get.or_use bid_totals[r2] 0u128 into r25;
+    add r25 r3 into r26;
+    is.eq r5.max_bid_amount 0u128 into r27;
+    lte r26 r5.max_bid_amount into r28;
+    or r27 r28 into r29;
+    assert.eq r29 true;
+    set r26 into bid_totals[r2];
+    add r6.total_committed r3 into r30;
+    gte r30 r5.supply into r31;
+    add r6.total_payments r4 into r32;
+    ternary r31 block.height r6.ended_at_block into r33;
+    cast r30 r32 r31 r33 false 0u128 0u128 into r34 as AuctionState;
+    set r34 into auction_states[r1];
+    get.or_use escrow_payments[r1] 0u128 into r35;
+    add r35 r4 into r36;
+    set r36 into escrow_payments[r1];
+    get stats[0field] into r37;
+    add r37.total_bids 1u64 into r38;
+    add r37.total_payment_collected r4 into r39;
+    cast r37.total_auctions r38 r39 into r40 as Stats;
+    set r40 into stats[0field];
 
 function place_bid_public:
     input r0 as field.public;
@@ -266,7 +270,7 @@ function place_bid_public:
     assert.eq r3 true;
     gt r2 0u64 into r4;
     assert.eq r4 true;
-    call credits.aleo/transfer_public_as_signer fairdrop_v3.aleo r2 into r5;
+    call credits.aleo/transfer_public_as_signer fairdrop_v4.aleo r2 into r5;
     cast r2 into r6 as u128;
     cast self.signer r0 r1 r6 into r7 as Bid.record;
     cast self.signer r0 into r8 as BidderKey;
@@ -274,7 +278,7 @@ function place_bid_public:
     cast r2 into r10 as u128;
     async place_bid_public r5 r0 r9 r1 r10 into r11;
     output r7 as Bid.record;
-    output r11 as fairdrop_v3.aleo/place_bid_public.future;
+    output r11 as fairdrop_v4.aleo/place_bid_public.future;
 
 finalize place_bid_public:
     input r0 as credits.aleo/transfer_public_as_signer.future;
@@ -301,40 +305,41 @@ finalize place_bid_public:
     lt r14 r15 into r16;
     sub r5.start_price r14 into r17;
     ternary r16 r17 r5.floor_price into r18;
-    mul r3 r18 into r19;
-    gte r4 r19 into r20;
-    assert.eq r20 true;
-    gte r3 r5.min_bid_amount into r21;
+    mul r4 r5.sale_scale into r19;
+    mul r3 r18 into r20;
+    gte r19 r20 into r21;
     assert.eq r21 true;
-    add r6.total_committed r3 into r22;
-    lte r22 r5.supply into r23;
-    assert.eq r23 true;
-    get.or_use bid_totals[r2] 0u128 into r24;
-    add r24 r3 into r25;
-    is.eq r5.max_bid_amount 0u128 into r26;
-    lte r25 r5.max_bid_amount into r27;
-    or r26 r27 into r28;
-    assert.eq r28 true;
-    set r25 into bid_totals[r2];
-    add r6.total_committed r3 into r29;
-    gte r29 r5.supply into r30;
-    add r6.total_payments r4 into r31;
-    ternary r30 block.height r6.ended_at_block into r32;
-    cast r29 r31 r30 r32 false 0u128 0u128 into r33 as AuctionState;
-    set r33 into auction_states[r1];
-    get.or_use escrow_payments[r1] 0u128 into r34;
-    add r34 r4 into r35;
-    set r35 into escrow_payments[r1];
-    get stats[0field] into r36;
-    add r36.total_bids 1u64 into r37;
-    add r36.total_payment_collected r4 into r38;
-    cast r36.total_auctions r37 r38 into r39 as Stats;
-    set r39 into stats[0field];
+    gte r3 r5.min_bid_amount into r22;
+    assert.eq r22 true;
+    add r6.total_committed r3 into r23;
+    lte r23 r5.supply into r24;
+    assert.eq r24 true;
+    get.or_use bid_totals[r2] 0u128 into r25;
+    add r25 r3 into r26;
+    is.eq r5.max_bid_amount 0u128 into r27;
+    lte r26 r5.max_bid_amount into r28;
+    or r27 r28 into r29;
+    assert.eq r29 true;
+    set r26 into bid_totals[r2];
+    add r6.total_committed r3 into r30;
+    gte r30 r5.supply into r31;
+    add r6.total_payments r4 into r32;
+    ternary r31 block.height r6.ended_at_block into r33;
+    cast r30 r32 r31 r33 false 0u128 0u128 into r34 as AuctionState;
+    set r34 into auction_states[r1];
+    get.or_use escrow_payments[r1] 0u128 into r35;
+    add r35 r4 into r36;
+    set r36 into escrow_payments[r1];
+    get stats[0field] into r37;
+    add r37.total_bids 1u64 into r38;
+    add r37.total_payment_collected r4 into r39;
+    cast r37.total_auctions r38 r39 into r40 as Stats;
+    set r40 into stats[0field];
 
 function close_auction:
     input r0 as field.public;
     async close_auction r0 into r1;
-    output r1 as fairdrop_v3.aleo/close_auction.future;
+    output r1 as fairdrop_v4.aleo/close_auction.future;
 
 finalize close_auction:
     input r0 as field.public;
@@ -355,29 +360,33 @@ finalize close_auction:
     sub r1.start_price r9 into r12;
     ternary r11 r12 r1.floor_price into r13;
     mul r2.total_committed r13 into r14;
-    cast r2.total_committed r2.total_payments r2.supply_met r2.ended_at_block true r13 r14 into r15 as AuctionState;
-    set r15 into auction_states[r0];
+    div r14 r1.sale_scale into r15;
+    cast r2.total_committed r2.total_payments r2.supply_met r2.ended_at_block true r13 r15 into r16 as AuctionState;
+    set r16 into auction_states[r0];
     branch.eq true true to end_otherwise_0_1;
     position end_then_0_0;
-    mul r2.total_committed r1.floor_price into r16;
-    cast r2.total_committed r2.total_payments r2.supply_met r2.ended_at_block true r1.floor_price r16 into r17 as AuctionState;
-    set r17 into auction_states[r0];
+    mul r2.total_committed r1.floor_price into r17;
+    div r17 r1.sale_scale into r18;
+    cast r2.total_committed r2.total_payments r2.supply_met r2.ended_at_block true r1.floor_price r18 into r19 as AuctionState;
+    set r19 into auction_states[r0];
     position end_otherwise_0_1;
 
 function claim:
     input r0 as Bid.record;
     input r1 as u128.public;
     input r2 as field.public;
-    mul r0.quantity r1 into r3;
-    sub r0.payment_amount r3 into r4;
-    cast r4 into r5 as u64;
-    call token_registry.aleo/mint_private r2 r0.owner r0.quantity false 4294967295u32 into r6 r7;
-    call credits.aleo/transfer_public_to_private r0.owner r5 into r8 r9;
-    cast r5 into r10 as u128;
-    async claim r7 r9 r0.auction_id r1 r2 r0.quantity r10 into r11;
-    output r6 as token_registry.aleo/Token.record;
-    output r8 as credits.aleo/credits.record;
-    output r11 as fairdrop_v3.aleo/claim.future;
+    input r3 as u128.public;
+    mul r0.quantity r1 into r4;
+    div r4 r3 into r5;
+    sub r0.payment_amount r5 into r6;
+    cast r6 into r7 as u64;
+    call token_registry.aleo/mint_private r2 r0.owner r0.quantity false 4294967295u32 into r8 r9;
+    call credits.aleo/transfer_public_to_private r0.owner r7 into r10 r11;
+    cast r7 into r12 as u128;
+    async claim r9 r11 r0.auction_id r1 r2 r3 r0.quantity r12 into r13;
+    output r8 as token_registry.aleo/Token.record;
+    output r10 as credits.aleo/credits.record;
+    output r13 as fairdrop_v4.aleo/claim.future;
 
 finalize claim:
     input r0 as token_registry.aleo/mint_private.future;
@@ -387,23 +396,25 @@ finalize claim:
     input r4 as field.public;
     input r5 as u128.public;
     input r6 as u128.public;
+    input r7 as u128.public;
     await r0;
     await r1;
-    get auction_configs[r2] into r7;
-    get auction_states[r2] into r8;
-    assert.eq r8.cleared true;
-    assert.eq r3 r8.clearing_price;
-    assert.eq r4 r7.sale_token_id;
-    get escrow_sales[r2] into r9;
-    lte r5 r9 into r10;
-    assert.eq r10 true;
-    sub r9 r5 into r11;
-    set r11 into escrow_sales[r2];
-    get escrow_payments[r2] into r12;
-    lte r6 r12 into r13;
-    assert.eq r13 true;
-    sub r12 r6 into r14;
-    set r14 into escrow_payments[r2];
+    get auction_configs[r2] into r8;
+    get auction_states[r2] into r9;
+    assert.eq r9.cleared true;
+    assert.eq r3 r9.clearing_price;
+    assert.eq r4 r8.sale_token_id;
+    assert.eq r5 r8.sale_scale;
+    get escrow_sales[r2] into r10;
+    lte r6 r10 into r11;
+    assert.eq r11 true;
+    sub r10 r6 into r12;
+    set r12 into escrow_sales[r2];
+    get escrow_payments[r2] into r13;
+    lte r7 r13 into r14;
+    assert.eq r14 true;
+    sub r13 r7 into r15;
+    set r15 into escrow_payments[r2];
 
 function withdraw_payments:
     input r0 as field.public;
@@ -413,7 +424,7 @@ function withdraw_payments:
     cast r1 into r3 as u64;
     call credits.aleo/transfer_public self.signer r3 into r4;
     async withdraw_payments r4 r0 self.signer r1 into r5;
-    output r5 as fairdrop_v3.aleo/withdraw_payments.future;
+    output r5 as fairdrop_v4.aleo/withdraw_payments.future;
 
 finalize withdraw_payments:
     input r0 as credits.aleo/transfer_public.future;
@@ -445,7 +456,7 @@ function withdraw_unsold:
     call token_registry.aleo/mint_private r2 self.signer r1 false 4294967295u32 into r4 r5;
     async withdraw_unsold r5 r0 self.signer r1 r2 into r6;
     output r4 as token_registry.aleo/Token.record;
-    output r6 as fairdrop_v3.aleo/withdraw_unsold.future;
+    output r6 as fairdrop_v4.aleo/withdraw_unsold.future;
 
 finalize withdraw_unsold:
     input r0 as token_registry.aleo/mint_private.future;

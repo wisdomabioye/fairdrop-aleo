@@ -39,7 +39,8 @@ export function BidForm({ config, currentPrice, creditRecords }: Props) {
   const fmtCredits = (v: bigint) => formatAmount(v, CREDITS_DECIMALS);
 
   const qty = parseTokenAmount(quantity, saleDecimals);
-  const totalCost = qty * currentPrice;
+  const saleScale = 10n ** BigInt(saleDecimals);
+  const totalCost = qty * currentPrice / saleScale;
 
   // payment_amount must fit in u64
   const paymentAmountU64 = totalCost <= 18446744073709551615n ? totalCost : 0n;

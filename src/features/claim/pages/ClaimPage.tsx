@@ -29,9 +29,12 @@ export function ClaimPage() {
   const fmtSale = (v: bigint) => formatTokenAmount(v, saleMeta);
   const fmtPay = (v: bigint) => formatTokenAmount(v, payMeta);
 
+  const saleDecimals = saleMeta?.decimals ?? 0;
+  const saleScale = 10n ** BigInt(saleDecimals);
+
   const breakdown = useMemo(() => {
     if (!selectedBid || !state?.cleared) return null;
-    const costAtClearing = selectedBid.quantity * state.clearing_price;
+    const costAtClearing = selectedBid.quantity * state.clearing_price / saleScale;
     const refund = selectedBid.payment_amount - costAtClearing;
     return {
       saleTokens: selectedBid.quantity,
@@ -47,6 +50,7 @@ export function ClaimPage() {
       selectedBid._record,
       `${state.clearing_price}u128`,
       config.sale_token_id,
+      `${saleScale}u128`,
     ]);
     if (txId) setSelectedBid(null);
   };
