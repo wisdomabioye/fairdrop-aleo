@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useTransaction } from "@/shared/hooks/useTransaction";
 import { TOKEN_REGISTRY_PROGRAM_ID } from "@/config/network";
-import { TokenGrid } from "@/shared/components/TokenGrid";
-import { TokenCard } from "@/shared/components/TokenCard";
+import { TokenRecordSelector } from "@/shared/components/TokenRecordSelector";
 import { Input } from "@/shared/components/ui/Input";
 import { Alert } from "@/shared/components/ui/Alert";
 import { TransactionButton } from "@/shared/components/TransactionButton";
@@ -45,26 +44,12 @@ export function BurnTab({ tokenRecords, onDone }: Props) {
         Only the token admin or an account with BURNER_ROLE can burn tokens.
       </Alert>
 
-      {!selected ? (
-        <TokenGrid
-          records={tokenRecords}
-          selected={null}
-          onSelect={setSelected}
-          label="Select record to burn"
-          emptyText="No token records found."
-        />
-      ) : (
-        <div>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Selected record
-          </p>
-          <TokenCard
-            record={selected}
-            selected
-            onDeselect={() => { setSelected(null); setAmount(""); }}
-          />
-        </div>
-      )}
+      <TokenRecordSelector
+        records={tokenRecords}
+        selected={selected}
+        onSelect={setSelected}
+        label="Select record to burn"
+      />
 
       {selected && (
         <div className="animate-fade-in space-y-1.5">
