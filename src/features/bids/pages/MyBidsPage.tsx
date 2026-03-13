@@ -10,6 +10,7 @@ import { DataRow } from "@/shared/components/ui/DataRow";
 import { PageHeader } from "@/shared/components/ui/PageHeader";
 import { Spinner } from "@/shared/components/ui/Spinner";
 import { formatField } from "@/shared/utils/formatting";
+import { AppRoutes } from "@/config/app.route";
 
 export function MyBidsPage() {
   const { address } = useWallet();
@@ -66,7 +67,7 @@ export function MyBidsPage() {
                   <div className="mb-3 flex items-center justify-between">
                     <Badge variant="info" dot>Bid</Badge>
                     <Link
-                      to={`/auction/${bid.auction_id}`}
+                      to={`${AppRoutes.auction}${bid.auction_id}`}
                       className="text-xs font-mono text-primary hover:underline"
                     >
                       {formatField(bid.auction_id)}
@@ -75,7 +76,7 @@ export function MyBidsPage() {
                   <DataRow label="Quantity" value={bid.quantity.toLocaleString()} />
                   <DataRow label="Payment Locked" value={bid.payment_amount.toLocaleString()} />
                   <div className="mt-3">
-                    <Link to="/claim">
+                    <Link to={AppRoutes.claim}>
                       <Button variant="success" size="sm" className="w-full">
                         Go to Claim
                       </Button>

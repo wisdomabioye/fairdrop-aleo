@@ -9,6 +9,7 @@ import { Button } from "@/shared/components/ui/Button";
 import { Spinner } from "@/shared/components/ui/Spinner";
 import { PageHeader } from "@/shared/components/ui/PageHeader";
 import type { AuctionEntry } from "@/features/auction/hooks/useAuctions";
+import { AppRoutes } from "@/config/app.route";
 
 function AuctionItem({ entry, blockHeight }: { entry: AuctionEntry; blockHeight: number }) {
   const { price, status: priceStatus } = useCurrentPrice(entry.config, blockHeight);
@@ -31,7 +32,7 @@ export function DashboardPage() {
         title="Dashboard"
         description="Privacy-preserving Dutch auctions with zero-knowledge proofs."
         action={
-          <Link to="/auction/new">
+          <Link to={AppRoutes.createAuction}>
             <Button variant="primary" size="lg">
               Create Auction
             </Button>
@@ -69,7 +70,7 @@ export function DashboardPage() {
             <p className="font-medium text-foreground">No auctions yet</p>
             <p className="mt-1 text-sm text-muted-foreground">
               Be the first to{" "}
-              <Link to="/auction/new" className="text-primary hover:underline">
+              <Link to={AppRoutes.createAuction} className="text-primary hover:underline">
                 create an auction
               </Link>
               .

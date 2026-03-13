@@ -2,6 +2,7 @@ import { useLocation } from "react-router-dom";
 import { Menu, Sun, Moon } from "lucide-react";
 import { ConnectButton } from "@/shared/components/wallet/ConnectButton";
 import { useTheme } from "@/shared/hooks/useTheme";
+import { AppRoutes } from "@/config/app.route";
 
 interface TopBarProps {
   onMenuToggle: () => void;
@@ -10,16 +11,16 @@ interface TopBarProps {
 // Maps route pathnames to human-readable page titles shown in the topbar.
 // Prefix-matched so /auction/new and /creator/manage also resolve correctly.
 const PAGE_TITLES: { prefix: string; title: string }[] = [
-  { prefix: "/auction/new",    title: "Create Auction" },
-  { prefix: "/creator/manage", title: "Manage Auction" },
-  { prefix: "/creator",        title: "My Auctions" },
-  { prefix: "/auction/",       title: "Auction" },
-  { prefix: "/bids",           title: "My Bids" },
-  { prefix: "/claim",          title: "Claim" },
-  { prefix: "/token-launch",         title: "Launch a Token" },
-  { prefix: "/token-manager",         title: "Token Manager" },
-  { prefix: "/guide",          title: "How It Works" },
-  { prefix: "/",               title: "Dashboard" },
+  { prefix: AppRoutes.createAuction,    title: "Create Auction" },
+  { prefix: AppRoutes.manageAuction, title: "Manage Auction" },
+  { prefix: AppRoutes.myAuctions,        title: "My Auctions" },
+  { prefix: AppRoutes.auction,       title: "Auction" },
+  { prefix: AppRoutes.myBids,           title: "My Bids" },
+  { prefix: AppRoutes.claim,          title: "Claim" },
+  { prefix: AppRoutes.tokenLaunch,         title: "Launch a Token" },
+  { prefix: AppRoutes.tokenManager,         title: "Token Manager" },
+  { prefix: AppRoutes.howItWorks,          title: "How It Works" },
+  { prefix: AppRoutes.dashboard,               title: "Dashboard" },
 ];
 
 function usePageTitle(): string {

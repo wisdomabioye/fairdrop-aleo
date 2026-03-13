@@ -11,6 +11,7 @@ import { Button } from "@/shared/components/ui/Button";
 import { Spinner } from "@/shared/components/ui/Spinner";
 import { PageHeader } from "@/shared/components/ui/PageHeader";
 import type { AuctionEntry } from "@/features/auction/hooks/useUserAuctions";
+import { AppRoutes } from "@/config/app.route";
 
 function AuctionItem({ entry, blockHeight }: { entry: AuctionEntry; blockHeight: number }) {
   const { price, status: priceStatus } = useCurrentPrice(entry.config, blockHeight);
@@ -23,7 +24,7 @@ function AuctionItem({ entry, blockHeight }: { entry: AuctionEntry; blockHeight:
   return (
     <div className="space-y-2">
       <AuctionCard config={entry.config} status={status} currentPrice={price} />
-      <Link to={`/creator/manage?id=${entry.config.auction_id}`}>
+      <Link to={`${AppRoutes.manageAuction}?id=${entry.config.auction_id}`}>
         <Button variant="secondary" size="sm" className="w-full">
           Manage
         </Button>
@@ -56,7 +57,7 @@ export function MyAuctionsPage() {
               <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
               Refresh
             </button>
-            <Link to="/auction/new">
+            <Link to={AppRoutes.createAuction}>
               <Button>Create New</Button>
             </Link>
           </div>
@@ -83,7 +84,7 @@ export function MyAuctionsPage() {
             Auctions you create will appear here automatically.
           </p>
           <div className="mt-4">
-            <Link to="/auction/new">
+            <Link to={AppRoutes.createAuction}>
               <Button>Create Your First Auction</Button>
             </Link>
           </div>

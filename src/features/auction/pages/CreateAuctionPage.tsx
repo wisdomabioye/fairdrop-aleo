@@ -21,6 +21,7 @@ import { PriceChart } from "../components/PriceChart";
 import { CREDITS_RESERVED_TOKEN_ID, CREDITS_DECIMALS } from "@/shared/types/token";
 import type { AuctionConfig } from "@/shared/types/auction";
 import type { TokenRecord } from "@/shared/types/token";
+import { AppRoutes } from "@/config/app.route";
 
 // startBlock intentionally excluded — always reflects live chain height
 interface FormState {
@@ -183,7 +184,7 @@ export function CreateAuctionPage() {
             </div>
             <div className="flex gap-3">
               <button
-                onClick={() => navigate("/creator")}
+                onClick={() => navigate(AppRoutes.myAuctions)}
                 className="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90"
               >
                 View My Auctions
@@ -233,7 +234,7 @@ export function CreateAuctionPage() {
               <Alert variant="warning" title="No token records in wallet">
                 Mint tokens first, then complete Token Launch Step 3 (Authorize) to grant
                 SUPPLY_MANAGER_ROLE to the auction contract.{" "}
-                <Link to="/token-launch" className="underline">Go to Token Launch.</Link>
+                <Link to={AppRoutes.tokenLaunch} className="underline">Go to Token Launch.</Link>
               </Alert>
             ) : (
               <TokenPicker
@@ -263,7 +264,7 @@ export function CreateAuctionPage() {
               {eligibleRecords.length === 0 && (
                 <p className="text-xs text-muted-foreground">
                   No records for this token.{" "}
-                  <Link to="/token-launch" className="text-primary hover:underline">Mint some first.</Link>
+                  <Link to={AppRoutes.tokenLaunch} className="text-primary hover:underline">Mint some first.</Link>
                 </p>
               )}
             </>

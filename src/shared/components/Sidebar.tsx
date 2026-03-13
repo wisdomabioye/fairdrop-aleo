@@ -10,6 +10,7 @@ import {
   BookOpen,
   type LucideIcon,
 } from "lucide-react";
+import { AppRoutes } from "@/config/app.route";
 import fairdropLogo from "@/assets/fairdrop.svg"
 
 interface SidebarProps {
@@ -33,34 +34,34 @@ const sections: NavSection[] = [
   {
     title: "Overview",
     items: [
-      { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
+      { to: AppRoutes.dashboard, label: "Dashboard", icon: LayoutDashboard, end: true },
     ],
   },
   {
     title: "Creator",
     items: [
-      { to: "/token-launch", label: "Token Launch", icon: Droplets },
-      { to: "/auction/new", label: "Create Auction", icon: PlusCircle },
-      { to: "/creator", label: "My Auctions", icon: Gavel, end: true },
+      { to: AppRoutes.tokenLaunch, label: "Token Launch", icon: Droplets },
+      { to: AppRoutes.createAuction, label: "Create Auction", icon: PlusCircle },
+      { to: AppRoutes.myAuctions, label: "My Auctions", icon: Gavel, end: true },
     ],
   },
   {
     title: "Bidder",
     items: [
-      { to: "/bids", label: "My Bids", icon: ClipboardList },
-      { to: "/claim", label: "Claim", icon: PackageCheck },
+      { to: AppRoutes.myBids, label: "My Bids", icon: ClipboardList },
+      { to: AppRoutes.claim, label: "Claim", icon: PackageCheck },
     ],
   },
   {
     title: "Tools",
     items: [
-      { to: "/token-manager", label: "Token Manager", icon: Layers },
+      { to: AppRoutes.tokenManager, label: "Token Manager", icon: Layers },
     ],
   },
   {
     title: "Learn",
     items: [
-      { to: "/guide", label: "How It Works", icon: BookOpen },
+      { to: AppRoutes.howItWorks, label: "How It Works", icon: BookOpen },
     ],
   },
 ];

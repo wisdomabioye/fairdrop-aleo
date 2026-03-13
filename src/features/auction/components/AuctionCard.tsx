@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import type { AuctionConfig, AuctionStatus } from "@/shared/types/auction";
 import { StatusBadge } from "./StatusBadge";
 import { formatField } from "@/shared/utils/formatting";
+import { AppRoutes } from "@/config/app.route";
 
 interface Props {
   config: AuctionConfig;
@@ -14,7 +15,7 @@ export function AuctionCard({ config, status, currentPrice }: Props) {
 
   return (
     <Link
-      to={`/auction/${config.auction_id}`}
+      to={`${AppRoutes.auction}${config.auction_id}`}
       className={`block rounded-2xl border bg-card p-5 shadow-md-custom transition-all hover-lift ${
         isActive ? "border-primary/30 animate-glow" : "border-border"
       }`}

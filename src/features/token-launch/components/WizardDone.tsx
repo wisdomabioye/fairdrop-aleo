@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { CheckCircle2, ChevronRight } from "lucide-react";
 import { DataRow } from "@/shared/components/ui/DataRow";
+import { AppRoutes } from "@/config/app.route";
 
 interface Props {
   tokenId: string;
@@ -23,7 +24,7 @@ export function WizardDone({ tokenId }: Props) {
       <div className="rounded-xl border border-border bg-secondary/50 p-3 text-left">
         <DataRow label="Token ID" value={<span className="font-mono text-xs break-all">{tokenId}</span>} />
       </div>
-      <Link to="/auction/new">
+      <Link to={AppRoutes.createAuction}>
         <button className="gradient-primary inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold text-white shadow-md">
           Create Auction <ChevronRight className="h-4 w-4" />
         </button>
