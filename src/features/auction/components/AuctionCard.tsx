@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
 import type { AuctionConfig, AuctionStatus } from "@/shared/types/auction";
 import { StatusBadge } from "./StatusBadge";
-import { formatField } from "@/shared/utils/formatting";
+import { formatField, formatAmount } from "@/shared/utils/formatting";
+import { CREDITS_DECIMALS } from "@/shared/types/token";
 import { AppRoutes } from "@/config/app.route";
 
 interface Props {
@@ -35,13 +36,13 @@ export function AuctionCard({ config, status, currentPrice }: Props) {
         <div className="text-right">
           <p className="text-xs text-muted-foreground">Current Price</p>
           <p className={`text-lg font-semibold ${isActive ? "text-primary animate-price-update" : "text-foreground"}`}>
-            {currentPrice !== null ? currentPrice.toLocaleString() : "\u2014"}
+            {currentPrice !== null ? `${formatAmount(currentPrice, CREDITS_DECIMALS)} ALEO` : "\u2014"}
           </p>
         </div>
       </div>
 
       <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span>Floor: {config.floor_price.toLocaleString()}</span>
+        <span>Floor: {formatAmount(config.floor_price, CREDITS_DECIMALS)} ALEO</span>
         <span>Blocks: {config.start_block}–{config.end_block}</span>
       </div>
     </Link>

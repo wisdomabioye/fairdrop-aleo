@@ -1,6 +1,8 @@
 import { useMemo } from "react";
 import type { AuctionConfig } from "@/shared/types/auction";
 import { computePriceCurve } from "../utils/price";
+import { formatAmount } from "@/shared/utils/formatting";
+import { CREDITS_DECIMALS } from "@/shared/types/token";
 
 interface Props {
   config: AuctionConfig;
@@ -66,7 +68,7 @@ export function PriceChart({ config, currentBlock, currentPrice }: Props) {
             <line x1={markerPos.x} y1="20" x2={markerPos.x} y2="260" stroke="var(--accent)" strokeWidth="1" strokeDasharray="4 4" opacity="0.5" />
             <circle cx={markerPos.x} cy={markerPos.y} r="6" fill="var(--accent)" stroke="white" strokeWidth="2" className="animate-pulse-subtle" />
             <text x={markerPos.x + 10} y={markerPos.y - 10} fill="var(--accent)" fontSize="11" fontWeight="600">
-              {currentPrice?.toLocaleString()}
+              {currentPrice ? `${formatAmount(currentPrice, CREDITS_DECIMALS)} ALEO` : ""}
             </text>
           </>
         )}
@@ -79,10 +81,10 @@ export function PriceChart({ config, currentBlock, currentPrice }: Props) {
           Block {config.end_block.toLocaleString()}
         </text>
         <text x="12" y="30" fill="var(--muted-foreground)" fontSize="10">
-          {config.start_price.toLocaleString()}
+          {formatAmount(config.start_price, CREDITS_DECIMALS)}
         </text>
         <text x="12" y="260" fill="var(--muted-foreground)" fontSize="10">
-          {config.floor_price.toLocaleString()}
+          {formatAmount(config.floor_price, CREDITS_DECIMALS)}
         </text>
       </svg>
     </div>
