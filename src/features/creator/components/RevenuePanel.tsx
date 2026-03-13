@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { getCreatorWithdrawn, getUnsoldWithdrawn } from "@/shared/lib/mappings";
+import { useTokenMetadata } from "@/shared/hooks/useTokenMetadata";
 import { Card } from "@/shared/components/ui/Card";
 import { DataRow } from "@/shared/components/ui/DataRow";
 import { Spinner } from "@/shared/components/ui/Spinner";
@@ -21,6 +22,11 @@ export function RevenuePanel({ auctionId, config, state, refetchTrigger }: Props
   const [withdrawn, setWithdrawn]           = useState(0n);
   const [unsoldWithdrawn, setUnsoldWithdrawn] = useState(0n);
   const [loading, setLoading]               = useState(false);
+
+  const { metadata: saleMeta } = useTokenMetadata(config.sale_token_id);
+  const { metadata: payMeta } = useTokenMetadata(config.payment_token_id);
+  const saleSymbol = saleMeta?.symbolStr ?? null;
+  const paySymbol = payMeta?.symbolStr ?? null;
 
   useEffect(() => {
     let cancelled = false;
@@ -52,19 +58,23 @@ export function RevenuePanel({ auctionId, config, state, refetchTrigger }: Props
   const remaining       = state.creator_revenue - withdrawn;
   const unsoldRemaining = unsoldSupply - unsoldWithdrawn;
 
+  /** Append token symbol suffix when available */
+  const pay = (v: string) => paySymbol ? <>{v} <span className="text-xs text-muted-foreground">{paySymbol}</span></> : v;
+  const sale = (v: string) => saleSymbol ? <>{v} <span className="text-xs text-muted-foreground">{saleSymbol}</span></> : v;
+
   return (
     <Card variant="gradient" padding="sm">
       <h4 className="mb-3 font-semibold text-foreground">Revenue Summary</h4>
-      <DataRow label="Clearing Price"  value={state.clearing_price.toLocaleString()} />
-      <DataRow label="Total Payments"  value={state.total_payments.toLocaleString()} />
-      <DataRow label="Creator Revenue" value={<span className="font-bold text-primary">{state.creator_revenue.toLocaleString()}</span>} />
-      <DataRow label="Withdrawn"       value={withdrawn.toLocaleString()} />
-      <DataRow label="Remaining"       value={<span className="font-medium text-success">{remaining.toLocaleString()}</span>} />
+      <DataRow label="Clearing Price"  value={pay(state.clearing_price.toLocaleString())} />
+      <DataRow label="Total Payments"  value={pay(state.total_payments.toLocaleString())} />
+      <DataRow label="Creator Revenue" value={<span className="font-bold text-primary">{state.creator_revenue.toLocaleString()}{paySymbol && <span className="ml-1 text-xs font-normal text-muted-foreground">{paySymbol}</span>}</span>} />
+      <DataRow label="Withdrawn"       value={pay(withdrawn.toLocaleString())} />
+      <DataRow label="Remaining"       value={<span className="font-medium text-success">{remaining.toLocaleString()}{paySymbol && <span className="ml-1 text-xs font-normal text-muted-foreground">{paySymbol}</span>}</span>} />
       {unsoldSupply > 0n && (
         <>
-          <DataRow label="Unsold Supply"     value={unsoldSupply.toLocaleString()} />
-          <DataRow label="Unsold Withdrawn"  value={unsoldWithdrawn.toLocaleString()} />
-          <DataRow label="Unsold Remaining"  value={<span className="font-medium text-warning">{unsoldRemaining.toLocaleString()}</span>} />
+          <DataRow label="Unsold Supply"     value={sale(unsoldSupply.toLocaleString())} />
+          <DataRow label="Unsold Withdrawn"  value={sale(unsoldWithdrawn.toLocaleString())} />
+          <DataRow label="Unsold Remaining"  value={<span className="font-medium text-warning">{unsoldRemaining.toLocaleString()}{saleSymbol && <span className="ml-1 text-xs font-normal text-muted-foreground">{saleSymbol}</span>}</span>} />
         </>
       )}
     </Card>

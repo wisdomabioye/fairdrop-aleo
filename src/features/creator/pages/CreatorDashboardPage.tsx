@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useTransaction } from "@/shared/hooks/useTransaction";
+import { useTokenMetadata } from "@/shared/hooks/useTokenMetadata";
 import { useAuction } from "@/features/auction/hooks/useAuction";
 import { StatusBadge } from "@/features/auction/components/StatusBadge";
 import { useBlockHeight } from "@/shared/hooks/useBlockHeight";
@@ -20,6 +21,11 @@ export function CreatorDashboardPage() {
   const [auctionIdInput, setAuctionIdInput] = useState(idFromUrl);
   const [auctionId, setAuctionId] = useState<string | undefined>(idFromUrl || undefined);
   const { config, state, loading, error } = useAuction(auctionId);
+
+  const { metadata: saleMeta } = useTokenMetadata(config?.sale_token_id);
+  const { metadata: payMeta } = useTokenMetadata(config?.payment_token_id);
+  const saleSymbol = saleMeta?.symbolStr ?? null;
+  const paySymbol = payMeta?.symbolStr ?? null;
 
   const [withdrawn, setWithdrawn]           = useState(0n);
   const [unsoldWithdrawn, setUnsoldWithdrawn] = useState(0n);
@@ -117,7 +123,10 @@ export function CreatorDashboardPage() {
             ) : state.cleared ? (
               <p className="text-sm text-muted-foreground">
                 Closed at clearing price{" "}
-                <span className="font-medium text-foreground">{state.clearing_price.toLocaleString()}</span>.
+                <span className="font-medium text-foreground">
+                  {state.clearing_price.toLocaleString()}
+                  {paySymbol && <span className="ml-1 text-xs text-muted-foreground">{paySymbol}</span>}
+                </span>.
               </p>
             ) : (
               <p className="text-sm text-muted-foreground">
@@ -135,9 +144,14 @@ export function CreatorDashboardPage() {
             {state.cleared && maxWithdrawable > 0n ? (
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  Max withdrawable: <span className="font-medium text-foreground">{maxWithdrawable.toLocaleString()}</span>
+                  Max withdrawable:{" "}
+                  <span className="font-medium text-foreground">
+                    {maxWithdrawable.toLocaleString()}
+                    {paySymbol && <span className="ml-1 text-xs text-muted-foreground">{paySymbol}</span>}
+                  </span>
                 </p>
                 <Input
+                  label={paySymbol ? `Amount (${paySymbol})` : "Amount"}
                   value={paymentAmount}
                   onChange={(e) => setPaymentAmount(e.target.value.replace(/[^0-9]/g, ""))}
                   placeholder={`Up to ${maxWithdrawable.toLocaleString()}`}
@@ -166,9 +180,14 @@ export function CreatorDashboardPage() {
             {state.cleared && maxUnsold > 0n ? (
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  Unsold supply: <span className="font-medium text-foreground">{maxUnsold.toLocaleString()}</span>
+                  Unsold supply:{" "}
+                  <span className="font-medium text-foreground">
+                    {maxUnsold.toLocaleString()}
+                    {saleSymbol && <span className="ml-1 text-xs text-muted-foreground">{saleSymbol}</span>}
+                  </span>
                 </p>
                 <Input
+                  label={saleSymbol ? `Amount (${saleSymbol})` : "Amount"}
                   value={unsoldAmount}
                   onChange={(e) => setUnsoldAmount(e.target.value.replace(/[^0-9]/g, ""))}
                   placeholder={`Up to ${maxUnsold.toLocaleString()}`}
