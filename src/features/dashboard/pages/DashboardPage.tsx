@@ -10,15 +10,6 @@ import { Spinner } from "@/shared/components/ui/Spinner";
 import { PageHeader } from "@/shared/components/ui/PageHeader";
 import type { AuctionEntry } from "@/features/auction/hooks/useAuctions";
 
-function StatCard({ label, value }: { label: string; value: string }) {
-  return (
-    <Card variant="glass" padding="sm" className="animate-fade-in">
-      <p className="text-sm text-muted-foreground">{label}</p>
-      <p className="text-2xl font-bold text-foreground">{value}</p>
-    </Card>
-  );
-}
-
 function AuctionItem({ entry, blockHeight }: { entry: AuctionEntry; blockHeight: number }) {
   const { price, status: priceStatus } = useCurrentPrice(entry.config, blockHeight);
   const status = entry.state?.cleared
@@ -47,13 +38,6 @@ export function DashboardPage() {
           </Link>
         }
       />
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard label="Total Auctions" value={total?.toLocaleString() ?? "—"} />
-        <StatCard label="Loaded" value={loading ? "…" : auctions.length.toLocaleString()} />
-        <StatCard label="Current Block" value={blockHeight > 0 ? blockHeight.toLocaleString() : "—"} />
-      </div>
 
       {/* Auction list */}
       <div>

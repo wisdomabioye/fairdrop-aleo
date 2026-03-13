@@ -30,6 +30,7 @@ export interface AuctionState {
 export interface Stats {
   total_auctions: number;
   total_bids: number;
+  total_payment_collected: number;
 }
 
 export interface BidRecord {

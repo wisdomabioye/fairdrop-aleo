@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Outlet } from "react-router-dom";
 import { Sidebar } from "./shared/components/Sidebar";
 import { TopBar } from "./shared/components/TopBar";
+import { GlobalStats } from "./shared/components/GlobalStats";
 import { TransactionTracker } from "./shared/components/TransactionTracker";
 import { TransactionTrackerProvider } from "./shared/context/TransactionTrackerContext";
 import { RefreshProvider } from "./shared/context/RefreshContext";
@@ -17,6 +18,8 @@ export default function App() {
 
         <div className="flex flex-1 flex-col overflow-hidden">
           <TopBar onMenuToggle={() => setSidebarOpen((o) => !o)} />
+
+          <GlobalStats />
 
           <div className="flex items-center justify-center gap-1.5 border-b border-border/50 bg-secondary/40 px-4 py-1.5 text-center text-xs text-warning">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-warning animate-pulse" />

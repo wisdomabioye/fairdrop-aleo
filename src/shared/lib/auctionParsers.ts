@@ -39,6 +39,7 @@ export function parseStats(text: string): Stats {
   return {
     total_auctions: parseU64(p["total_auctions"] ?? "0u64"),
     total_bids: parseU64(p["total_bids"] ?? "0u64"),
+    total_payment_collected: Number(parseU128(p["total_payment_collected"] ?? "0u128")),
   };
 }
 
