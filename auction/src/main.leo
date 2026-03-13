@@ -4,7 +4,7 @@
 // Sale tokens   : token_registry.aleo/Token, deposited as private record at auction creation.
 //                 Fairdrop burns the deposit (freeing max_supply headroom), then re-mints
 //                 privately to winners at claim time. Net supply change = 0.
-// Roles required: fairdrop_v3.aleo must hold SUPPLY_MANAGER_ROLE (3) on the sale token.
+// Roles required: fairdrop_v4.aleo must hold SUPPLY_MANAGER_ROLE (3) on the sale token.
 //                 This covers both burn_private (deposit) and mint_private (claim/withdraw).
 // Privacy model :
 //   - Bid amount  : public (unavoidable - required for on-chain supply accounting).
@@ -18,7 +18,7 @@
 import credits.aleo;
 import token_registry.aleo;
 
-program fairdrop_v3.aleo {
+program fairdrop_v4.aleo {
     @admin(address="aleo128wz89c78ur4mx378056yd9q7kqmphr07k0kfsmnwvqnv7g9syyqkg263r")
     async constructor() {}
 
@@ -54,15 +54,16 @@ program fairdrop_v3.aleo {
         creator: address,
         sale_token_id: field,
         payment_token_id: field,    // always CREDITS_RESERVED_TOKEN_ID in v2; kept for future ARC-20 stablecoin support
-        supply: u128,
-        start_price: u128,          // microcredits per token
-        floor_price: u128,          // microcredits per token
+        supply: u128,               // raw on-chain token units
+        start_price: u128,          // microcredits per human-readable token unit
+        floor_price: u128,          // microcredits per human-readable token unit
         start_block: u32,
         end_block: u32,
         price_decay_blocks: u32,
-        price_decay_amount: u128,
-        max_bid_amount: u128,       // 0 = unlimited per bidder
-        min_bid_amount: u128,
+        price_decay_amount: u128,   // microcredits per human-readable token unit per step
+        max_bid_amount: u128,       // raw token units; 0 = unlimited per bidder
+        min_bid_amount: u128,       // raw token units
+        sale_scale: u128,           // 10^sale_token_decimals, passed at creation by creator
     }
 
     // Mutable auction state updated during the lifecycle.
@@ -73,7 +74,7 @@ program fairdrop_v3.aleo {
         ended_at_block: u32,        // block when supply was exhausted (0 if not yet)
         cleared: bool,
         clearing_price: u128,       // uniform price all winners pay
-        creator_revenue: u128,      // total_committed * clearing_price
+        creator_revenue: u128,      // total_committed * clearing_price / sale_scale (microcredits)
     }
 
     // Used to hash (bidder, auction_id) → pseudonymous key for per-bidder limits.
@@ -147,12 +148,12 @@ program fairdrop_v3.aleo {
     // fairdrop burns the deposit immediately (burn_private CPI), freeing max_supply
     // headroom so that claim (mint_private) is always guaranteed to succeed.
     // Change (token.amount - supply) is returned to the creator as a private record.
-    // Requires fairdrop_v3.aleo to hold SUPPLY_MANAGER_ROLE on the sale token.
+    // Requires fairdrop_v4.aleo to hold SUPPLY_MANAGER_ROLE on the sale token.
     async transition create_auction(
         token: token_registry.aleo/Token,   // private deposit — consumed and burned
         public sale_token_id: field,
         public payment_token_id: field,
-        public supply: u128,                // auction portion (≤ token.amount)
+        public supply: u128,                // auction portion (≤ token.amount), raw token units
         public start_price: u128,
         public floor_price: u128,
         public start_block: u32,
@@ -161,6 +162,7 @@ program fairdrop_v3.aleo {
         public price_decay_amount: u128,
         public max_bid_amount: u128,
         public min_bid_amount: u128,
+        public sale_scale: u128,            // 10^sale_token_decimals
     ) -> (token_registry.aleo/Token, Future) {
         assert(supply > 0u128);
         assert(token.amount >= supply);
@@ -185,6 +187,7 @@ program fairdrop_v3.aleo {
             price_decay_amount,
             max_bid_amount,
             min_bid_amount,
+            sale_scale,
         ));
     }
 
@@ -202,6 +205,7 @@ program fairdrop_v3.aleo {
         price_decay_amount: u128,
         max_bid_amount: u128,
         min_bid_amount: u128,
+        sale_scale: u128,
     ) {
         f_burn.await();
 
@@ -220,10 +224,10 @@ program fairdrop_v3.aleo {
         assert(min_bid_amount > 0u128);
         assert(max_bid_amount == 0u128 || max_bid_amount >= min_bid_amount);
 
-        // Verify fairdrop_v3.aleo has SUPPLY_MANAGER_ROLE on the sale token.
+        // Verify fairdrop_v4.aleo has SUPPLY_MANAGER_ROLE on the sale token.
         // SUPPLY_MANAGER_ROLE covers both burn_private (deposit) and mint_private (claim).
         let role_owner: TokenOwner = TokenOwner {
-            account: fairdrop_v3.aleo,
+            account: fairdrop_v4.aleo,
             token_id: sale_token_id,
         };
         let role_owner_hash: field = BHP256::hash_to_field(role_owner);
@@ -255,6 +259,7 @@ program fairdrop_v3.aleo {
             price_decay_amount: price_decay_amount,
             max_bid_amount: max_bid_amount,
             min_bid_amount: min_bid_amount,
+            sale_scale: sale_scale,
         });
 
         auction_states.set(auction_id, AuctionState {
@@ -356,7 +361,7 @@ program fairdrop_v3.aleo {
             ? config.start_price - total_decay
             : config.floor_price;
 
-        assert(payment_amount >= quantity * current_price);
+        assert(payment_amount * config.sale_scale >= quantity * current_price);
         assert(quantity >= config.min_bid_amount);
         assert(state.total_committed + quantity <= config.supply);
 
@@ -397,7 +402,7 @@ program fairdrop_v3.aleo {
 
     // Bidder pays from their public credits.aleo/account mapping balance.
     // transfer_public_as_signer pulls from self.signer (the original tx initiator),
-    // not self.caller (fairdrop_v3.aleo), so no pre-approval is needed.
+    // not self.caller (fairdrop_v4.aleo), so no pre-approval is needed.
     async transition place_bid_public(
         public auction_id: field,
         public quantity: u128,
@@ -453,7 +458,7 @@ program fairdrop_v3.aleo {
             ? config.start_price - total_decay
             : config.floor_price;
 
-        assert(payment_amount >= quantity * current_price);
+        assert(payment_amount * config.sale_scale >= quantity * current_price);
         assert(quantity >= config.min_bid_amount);
         assert(state.total_committed + quantity <= config.supply);
 
@@ -517,7 +522,7 @@ program fairdrop_v3.aleo {
             let clearing_price: u128 = total_decay < price_range
                 ? config.start_price - total_decay
                 : config.floor_price;
-            let revenue: u128 = state.total_committed * clearing_price;
+            let revenue: u128 = state.total_committed * clearing_price / config.sale_scale;
 
             auction_states.set(auction_id, AuctionState {
                 total_committed: state.total_committed,
@@ -530,7 +535,7 @@ program fairdrop_v3.aleo {
             });
         } else {
             let clearing_price: u128 = config.floor_price;
-            let revenue: u128 = state.total_committed * clearing_price;
+            let revenue: u128 = state.total_committed * clearing_price / config.sale_scale;
 
             auction_states.set(auction_id, AuctionState {
                 total_committed: state.total_committed,
@@ -561,11 +566,12 @@ program fairdrop_v3.aleo {
     // The recipient of the refund is NOT visible.
     async transition claim(
         bid: Bid,
-        public clearing_price: u128, // ??
+        public clearing_price: u128,
         public sale_token_id: field,
+        public sale_scale: u128,
     ) -> (token_registry.aleo/Token, credits.aleo/credits, Future) {
         let sale_amount: u128 = bid.quantity;
-        let cost_at_clearing: u128 = bid.quantity * clearing_price;
+        let cost_at_clearing: u128 = bid.quantity * clearing_price / sale_scale;
         let refund_amount: u64 = (bid.payment_amount - cost_at_clearing) as u64;
 
         // CPI: mint sale tokens privately to bidder.
@@ -590,6 +596,7 @@ program fairdrop_v3.aleo {
             bid.auction_id,
             clearing_price,
             sale_token_id,
+            sale_scale,
             sale_amount,
             refund_amount as u128,
         ));
@@ -601,6 +608,7 @@ program fairdrop_v3.aleo {
         auction_id: field,
         clearing_price: u128,
         sale_token_id: field,
+        sale_scale: u128,
         sale_amount: u128,
         refund_amount: u128,
     ) {
@@ -613,6 +621,7 @@ program fairdrop_v3.aleo {
         assert(state.cleared);
         assert_eq(clearing_price, state.clearing_price);
         assert_eq(sale_token_id, config.sale_token_id);
+        assert_eq(sale_scale, config.sale_scale);
 
         // Deduct from mint budget.
         let sale_remaining: u128 = escrow_sales.get(auction_id);
@@ -638,7 +647,7 @@ program fairdrop_v3.aleo {
     ) -> Future {
         assert(amount > 0u128);
 
-        // transfer_public pulls from self.caller's (fairdrop_v3.aleo) public balance.
+        // transfer_public pulls from self.caller's (fairdrop_v4.aleo) public balance.
         let f0: Future = credits.aleo/transfer_public(self.signer, amount as u64);
 
         return finalize_withdraw_payments(f0, auction_id, self.signer, amount);
