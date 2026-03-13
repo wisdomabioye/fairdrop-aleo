@@ -1,81 +1,134 @@
+import { Link } from "react-router-dom";
+import {
+  Rocket,
+  Gavel,
+  Lock,
+  TrendingDown,
+  CheckCircle2,
+  Gift,
+  Wallet,
+  ShieldCheck,
+  ArrowRight,
+  type LucideIcon,
+} from "lucide-react";
 import { Card } from "@/shared/components/ui/Card";
-import { PageHeader } from "@/shared/components/ui/PageHeader";
+import { AppRoutes } from "@/config/app.route";
 
-const steps = [
+interface Step {
+  icon: LucideIcon;
+  title: string;
+  description: string;
+  link?: { to: string; label: string };
+  accent: string;
+}
+
+const steps: Step[] = [
   {
-    number: "1",
-    title: "Mint Test Tokens",
+    icon: Rocket,
+    title: "Launch a Token",
     description:
-      "Use the Faucet to create test tokens. You'll need sale tokens (to deposit into an auction) and payment tokens (for bidders to pay with).",
+      "Register your token on ARC-21, mint the initial supply, and authorize the auction contract to distribute it.",
+    link: { to: AppRoutes.tokenLaunch, label: "Launch Token" },
+    accent: "from-blue-500/20 to-cyan-500/20",
   },
   {
-    number: "2",
+    icon: Gavel,
     title: "Create an Auction",
     description:
-      "Configure a Dutch auction by setting a start price, floor price, block range, and decay parameters. Your sale tokens are deposited into escrow.",
+      "Set your start price, floor price, block range, and decay curve. Your tokens go into on-chain escrow.",
+    link: { to: AppRoutes.createAuction, label: "Create Auction" },
+    accent: "from-violet-500/20 to-purple-500/20",
   },
   {
-    number: "3",
+    icon: Lock,
     title: "Place Bids",
     description:
-      "Bidders lock payment tokens against a quantity at the current price. All bids are private \u2014 encrypted as Aleo records visible only to the bidder.",
+      "Bidders lock credits against a quantity at the current price. Every bid is encrypted — only the bidder can see it.",
+    link: { to: AppRoutes.dashboard, label: "Browse Auctions" },
+    accent: "from-emerald-500/20 to-green-500/20",
   },
   {
-    number: "4",
-    title: "Price Decays Over Time",
+    icon: TrendingDown,
+    title: "Price Decays",
     description:
-      "The price drops from the start price toward the floor price at regular block intervals. When total committed quantity meets supply, the auction can be closed.",
+      "The price drops from start → floor at regular block intervals. Once committed quantity meets supply, the auction can close.",
+    accent: "from-amber-500/20 to-yellow-500/20",
   },
   {
-    number: "5",
+    icon: CheckCircle2,
     title: "Close & Clear",
     description:
-      "The creator (or anyone) closes the auction once supply is met or the end block is reached. A single clearing price is set \u2014 all bidders pay the same price.",
+      "Anyone can close the auction when supply is met or the end block arrives. A single clearing price is set — everyone pays the same.",
+    link: { to: AppRoutes.myAuctions, label: "My Auctions" },
+    accent: "from-sky-500/20 to-blue-500/20",
   },
   {
-    number: "6",
+    icon: Gift,
     title: "Claim Tokens",
     description:
-      "After clearing, bidders claim their sale tokens and receive a refund for any overpayment (bid price minus clearing price, times quantity).",
+      "Bidders claim their tokens and get an automatic refund for any overpayment above the clearing price.",
+    link: { to: AppRoutes.claim, label: "Claim" },
+    accent: "from-pink-500/20 to-rose-500/20",
   },
   {
-    number: "7",
+    icon: Wallet,
     title: "Withdraw Revenue",
     description:
-      "The auction creator withdraws payment revenue and any unsold tokens from escrow.",
+      "The creator withdraws payment revenue and any unsold tokens from escrow.",
+    link: { to: AppRoutes.myAuctions, label: "My Auctions" },
+    accent: "from-orange-500/20 to-red-500/20",
   },
 ];
 
+function StepCard({ step, index }: { step: Step; index: number }) {
+  const Icon = step.icon;
+  return (
+    <Card padding="default" className="group relative overflow-hidden transition-all hover:shadow-md">
+      <div className={`absolute inset-0 bg-gradient-to-br ${step.accent} opacity-0 transition-opacity group-hover:opacity-100`} />
+      <div className="relative flex gap-3.5">
+        <div className="flex flex-col items-center gap-1.5">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg gradient-primary text-sm font-bold text-white shadow-sm">
+            {index + 1}
+          </div>
+          <Icon className="h-4 w-4 text-muted-foreground" strokeWidth={1.5} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-base font-semibold text-foreground sm:text-lg">{step.title}</h3>
+          <p className="mt-1 text-sm text-muted-foreground leading-relaxed sm:text-base">{step.description}</p>
+          {step.link && (
+            <Link
+              to={step.link.to}
+              className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+            >
+              {step.link.label}
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          )}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 export function GuidePage() {
   return (
-    <div className="space-y-8 animate-fade-in">
-      <PageHeader
-        title="How It Works"
-        description="A step-by-step guide to Fairdrop's privacy-preserving Dutch auctions."
-      />
+    <div className="space-y-6 animate-fade-in">
+      <div>
+        <h2 className="text-2xl font-bold text-foreground">How It Works</h2>
+        <p className="mt-1 text-base text-muted-foreground">7 steps to a fair, private auction.</p>
+      </div>
 
-      <div className="space-y-4">
-        {steps.map((step) => (
-          <Card key={step.number} padding="default">
-            <div className="flex gap-4">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full gradient-primary text-sm font-bold text-white">
-                {step.number}
-              </div>
-              <div>
-                <h3 className="font-semibold text-foreground">{step.title}</h3>
-                <p className="mt-1 text-sm text-muted-foreground leading-relaxed">{step.description}</p>
-              </div>
-            </div>
-          </Card>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {steps.map((step, i) => (
+          <StepCard key={i} step={step} index={i} />
         ))}
       </div>
 
       <Card variant="glass" padding="lg" className="text-center">
-        <h3 className="text-lg font-semibold text-foreground">Key Guarantee</h3>
-        <p className="mt-2 text-sm text-muted-foreground leading-relaxed max-w-xl mx-auto">
-          Every participant pays the same clearing price, regardless of when they bid.
-          Overpayments are automatically refunded. All bid details remain private through
-          Aleo's zero-knowledge proof system.
+        <ShieldCheck className="mx-auto h-5 w-5 text-primary" strokeWidth={1.75} />
+        <h3 className="mt-2 text-base font-semibold text-foreground">The Fairdrop Guarantee</h3>
+        <p className="mt-1 mx-auto max-w-md text-sm text-muted-foreground leading-relaxed">
+          One clearing price for everyone. Automatic overpayment refunds. All bids stay private via Aleo's zero-knowledge proofs.
         </p>
       </Card>
     </div>
