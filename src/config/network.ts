@@ -25,7 +25,7 @@ export const WALLET_NETWORK: Network =
 // ── Program IDs ──────────────────────────────────────────────────────────────
 /** fairdrop.aleo — the auction program */
 export const PROGRAM_ID              = requireEnv("VITE_PROGRAM_ID");
-/** token_registry.aleo — ARC-21 token registry */
+/** token_registry.aleo — ARC-20 token registry */
 export const TOKEN_REGISTRY_PROGRAM_ID = requireEnv("VITE_TOKEN_REGISTRY_PROGRAM_ID");
 /** credits.aleo — native ALEO credits program */
 export const CREDITS_PROGRAM_ID      = "credits.aleo";
@@ -34,7 +34,7 @@ export const CREDITS_PROGRAM_ID      = "credits.aleo";
  * The bech32 program address of fairdrop.aleo.
  * Used in the Token Launch wizard "Authorize Auction" step when calling
  * token_registry.aleo/set_role(token_id, FAIRDROP_PROGRAM_ADDRESS, MINTER_ROLE).
- * Determined after deployment — set this once fairdrop.aleo is deployed.
+ * Determined from the program name.
  */
 export const FAIRDROP_PROGRAM_ADDRESS = requireEnv("VITE_FAIRDROP_PROGRAM_ADDRESS");
 
