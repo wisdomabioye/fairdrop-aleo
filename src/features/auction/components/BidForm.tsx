@@ -1,11 +1,13 @@
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Shield, Eye } from "lucide-react";
+import { useWallet } from "@provablehq/aleo-wallet-adaptor-react";
 import type { AuctionConfig } from "@/shared/types/auction";
 import type { CreditRecord } from "@/shared/types/token";
 import { CREDITS_DECIMALS } from "@/shared/types/token";
 import { useTransaction } from "@/shared/hooks/useTransaction";
 import { useTokenMetadata } from "@/shared/hooks/useTokenMetadata";
+import { ConnectButton } from "@/shared/components/wallet/ConnectButton";
 import { formatTokenAmount, formatAmount, parseTokenAmount } from "@/shared/utils/formatting";
 import { TransactionButton } from "@/shared/components/TransactionButton";
 import { DropdownSelect } from "@/shared/components/ui/DropdownSelect";
@@ -21,6 +23,7 @@ interface Props {
 }
 
 export function BidForm({ config, currentPrice, creditRecords }: Props) {
+  const { address } = useWallet();
   const [mode, setMode] = useState<"private" | "public">("private");
   const [quantity, setQuantity] = useState("");
   const [selectedRecord, setSelectedRecord] = useState<CreditRecord | null>(null);
@@ -167,14 +170,20 @@ export function BidForm({ config, currentPrice, creditRecords }: Props) {
 
         {tx.error && <Alert variant="error" title="Transaction failed">{tx.error}</Alert>}
 
-        <TransactionButton
-          onClick={handleBid}
-          txStatus={tx.status}
-          disabled={!!validation}
-          className="w-full"
-        >
-          {validation || `Place ${mode === "private" ? "Private" : "Public"} Bid`}
-        </TransactionButton>
+        {!address ? (
+          <div className="w-full flex justify-center">
+            <ConnectButton className="w-full text-lg" />
+          </div>
+        ) : (
+          <TransactionButton
+            onClick={handleBid}
+            txStatus={tx.status}
+            disabled={!!validation}
+            className="w-full"
+          >
+            {validation || `Place ${mode === "private" ? "Private" : "Public"} Bid`}
+          </TransactionButton>
+        )}
       </div>
     </Card>
   );

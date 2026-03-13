@@ -3,15 +3,15 @@ import { useWalletModal } from "@provablehq/aleo-wallet-adaptor-react-ui";
 import { Button } from "@/shared/components/ui/Button";
 import { WalletMenu } from "./WalletMenu";
 
-export function ConnectButton() {
+export function ConnectButton({className = ""}: {className?: string}) {
   const { address, connected, connecting, disconnect, wallet } = useWallet();
   const { setVisible } = useWalletModal();
 
   if (!connected || !address) {
     return (
       <Button
+        className={className}
         variant="primary"
-        size="sm"
         loading={connecting}
         loadingText="Connecting…"
         onClick={() => setVisible(true)}
