@@ -40,6 +40,12 @@ export function useTokenMetadata(
 } {
   const isArray = Array.isArray(input);
 
+  // Stabilize array input: serialize to a string so the effect only re-runs
+  // when the actual IDs change, not on every render (new array reference).
+  const stableKey = isArray
+    ? (input as string[]).slice().sort().join("\n")
+    : (input ?? "");
+
   const [metadata, setMetadata] = useState<TokenMetadata | null>(null);
   const [metadataMap, setMetadataMap] = useState<Map<string, TokenMetadata>>(new Map());
   const [loading, setLoading] = useState(false);
@@ -47,51 +53,58 @@ export function useTokenMetadata(
   // Cache: tokenId → TokenMetadata (lives for the lifetime of this hook instance)
   const cache = useRef<Map<string, TokenMetadata>>(new Map());
 
-  const fetch = useCallback(async () => {
-    if (!input || (isArray && (input as string[]).length === 0)) return;
-
-    setLoading(true);
-    try {
-      if (isArray) {
-        const ids = input as string[];
-        const uncached = ids.filter((id) => !cache.current.has(id));
-
-        // Fetch all uncached IDs in parallel
-        const results = await Promise.all(uncached.map((id) => fetchTokenMetadata(id)));
-        uncached.forEach((id, i) => {
-          if (results[i]) cache.current.set(id, results[i]!);
-        });
-
-        const next = new Map<string, TokenMetadata>();
-        for (const id of ids) {
-          const m = cache.current.get(id);
-          if (m) next.set(id, m);
-        }
-        setMetadataMap(next);
-      } else {
-        const id = input as string;
-        if (cache.current.has(id)) {
-          setMetadata(cache.current.get(id)!);
-        } else {
-          const m = await fetchTokenMetadata(id);
-          if (m) cache.current.set(id, m);
-          setMetadata(m);
-        }
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [input, isArray]);
-
-  // Bust cache on refresh so stale supply/decimals are re-read
-  const refresh = useCallback(() => {
-    cache.current.clear();
-    fetch();
-  }, [fetch]);
+  const [revision, setRevision] = useState(0);
 
   useEffect(() => {
-    fetch();
-  }, [fetch]);
+    if (!stableKey) return;
+    let cancelled = false;
+
+    (async () => {
+      setLoading(true);
+      try {
+        if (isArray) {
+          const ids = stableKey.split("\n").filter(Boolean);
+          const uncached = ids.filter((id) => !cache.current.has(id));
+
+          if (uncached.length > 0) {
+            const results = await Promise.all(uncached.map((id) => fetchTokenMetadata(id)));
+            uncached.forEach((id, i) => {
+              if (results[i]) cache.current.set(id, results[i]!);
+            });
+          }
+
+          if (cancelled) return;
+          const next = new Map<string, TokenMetadata>();
+          for (const id of ids) {
+            const m = cache.current.get(id);
+            if (m) next.set(id, m);
+          }
+          setMetadataMap(next);
+        } else {
+          const id = stableKey;
+          if (cache.current.has(id)) {
+            if (!cancelled) setMetadata(cache.current.get(id)!);
+          } else {
+            const m = await fetchTokenMetadata(id);
+            if (!cancelled) {
+              if (m) cache.current.set(id, m);
+              setMetadata(m);
+            }
+          }
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stableKey, isArray, revision]);
+
+  const refresh = useCallback(() => {
+    cache.current.clear();
+    setRevision((r) => r + 1);
+  }, []);
 
   return isArray ? { metadataMap, loading, refresh } : { metadata, loading, refresh };
 }

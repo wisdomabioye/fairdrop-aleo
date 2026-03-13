@@ -1,4 +1,5 @@
 import type { CreatorToken } from "@/shared/hooks/useCreatorTokens";
+import { DropdownSelect } from "@/shared/components/ui/DropdownSelect";
 
 interface Props {
   tokens: CreatorToken[];
@@ -7,31 +8,38 @@ interface Props {
 }
 
 export function TokenPicker({ tokens, selectedId, onSelect }: Props) {
+  const selected = tokens.find((t) => t.tokenId === selectedId) ?? null;
+
   return (
-    <div className="space-y-2">
-      {tokens.map((t) => (
-        <button
-          key={t.tokenId}
-          onClick={() => onSelect(t.tokenId)}
-          className={`w-full rounded-xl border px-4 py-3 text-left transition-colors ${
-            selectedId === t.tokenId
-              ? "border-primary bg-primary/10"
-              : "border-border hover:border-primary/40"
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <span className="font-medium text-foreground">
-              {t.metadata?.symbolStr ?? t.tokenId}
-              {t.metadata?.nameStr && (
-                <span className="ml-2 text-xs text-muted-foreground font-normal">
-                  {t.metadata.nameStr}
-                </span>
-              )}
-            </span>
-          </div>
-          <p className="mt-0.5 font-mono text-xs text-muted-foreground">{t.tokenId}</p>
-        </button>
-      ))}
+    <DropdownSelect
+      items={tokens}
+      selected={selected}
+      getId={(t) => t.tokenId}
+      onSelect={(t) => onSelect(t.tokenId)}
+      placeholder="Pick a token…"
+      emptyText="No tokens found."
+      renderTrigger={(t) => <TokenRow token={t} />}
+      renderOption={(t) => <TokenRow token={t} />}
+    />
+  );
+}
+
+function TokenRow({ token: t }: { token: CreatorToken }) {
+  const symbol = t.metadata?.symbolStr;
+  const name = t.metadata?.nameStr;
+  return (
+    <div className="flex flex-1 items-center gap-2 min-w-0">
+      {symbol && (
+        <span className="shrink-0 rounded-md bg-primary/10 px-1.5 py-0.5 text-xs font-semibold text-primary">
+          {symbol}
+        </span>
+      )}
+      <span className="truncate text-sm text-foreground">
+        {name ?? t.tokenId.slice(0, 20) + "…"}
+      </span>
+      <span className="ml-auto shrink-0 tabular-nums text-sm font-medium text-muted-foreground">
+        {t.ownedAmount.toLocaleString()}
+      </span>
     </div>
   );
 }
