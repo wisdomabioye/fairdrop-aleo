@@ -226,7 +226,7 @@ export function CreateAuctionPage() {
           </div>
 
           {/* Step 2: Pick the record to deposit — supply = record.amount */}
-          {form.saleTokenId && (
+          {(!tokensLoading && !!form.saleTokenId) && (
             <>
               <TokenRecordSelector
                 records={eligibleRecords}
