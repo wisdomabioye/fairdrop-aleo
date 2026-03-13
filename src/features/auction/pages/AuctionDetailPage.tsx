@@ -10,7 +10,8 @@ import { PriceChart } from "../components/PriceChart";
 import { BidForm } from "../components/BidForm";
 import { useAuction } from "../hooks/useAuction";
 import { useCurrentPrice } from "../hooks/useCurrentPrice";
-import { formatField } from "@/shared/utils/formatting";
+import { formatField, formatAmount } from "@/shared/utils/formatting";
+import { CREDITS_DECIMALS } from "@/shared/types/token";
 
 export function AuctionDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -45,7 +46,7 @@ export function AuctionDetailPage() {
         <div className={`rounded-2xl border p-4 text-right ${isActive ? "border-primary/30 animate-glow" : "border-border"}`}>
           <p className="text-xs text-muted-foreground">Current Price</p>
           <p className={`text-3xl font-bold ${isActive ? "text-primary" : "text-foreground"}`}>
-            {price !== null ? price.toLocaleString() : "\u2014"}
+            {price !== null ? `${formatAmount(price, CREDITS_DECIMALS)} ALEO` : "\u2014"}
           </p>
         </div>
       </div>
