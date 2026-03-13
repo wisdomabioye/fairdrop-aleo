@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { useTransaction } from "@/shared/hooks/useTransaction";
+import { useTokenMetadata } from "@/shared/hooks/useTokenMetadata";
+import { parseTokenAmount } from "@/shared/utils/formatting";
 import { TOKEN_REGISTRY_PROGRAM_ID } from "@/config/network";
 import { TokenRecordSelector } from "@/shared/components/TokenRecordSelector";
-import { Input } from "@/shared/components/ui/Input";
+import { TokenAmountInput } from "@/shared/components/ui/TokenAmountInput";
 import { Alert } from "@/shared/components/ui/Alert";
 import { TransactionButton } from "@/shared/components/TransactionButton";
 import type { TokenRecord } from "@/shared/types/token";
@@ -21,15 +23,18 @@ export function BurnTab({ tokenRecords, onDone }: Props) {
   const [selected, setSelected] = useState<TokenRecord | null>(null);
   const [amount, setAmount]     = useState("");
   const tx = useTransaction({ programId: TOKEN_REGISTRY_PROGRAM_ID, label: "Burn Tokens" });
+  const { metadata: tokenMeta } = useTokenMetadata(selected?.token_id);
+  const decimals = tokenMeta?.decimals ?? 0;
+  const symbol = tokenMeta?.symbolStr ?? null;
 
-  const amountN = BigInt(amount || "0");
-  const valid   = !!(selected && amountN > 0n && amountN <= selected.amount);
+  const rawAmount = parseTokenAmount(amount, decimals);
+  const valid     = !!(selected && rawAmount > 0n && rawAmount <= selected.amount);
 
   const handleBurn = async () => {
     if (!selected || !valid) return;
     const txId = await tx.execute("burn_private", [
       selected._record,
-      `${amountN}u128`,
+      `${rawAmount}u128`,
     ]);
     if (txId) {
       onDone("Burn submitted — remainder record will return to your wallet.");
@@ -52,20 +57,17 @@ export function BurnTab({ tokenRecords, onDone }: Props) {
       />
 
       {selected && (
-        <div className="animate-fade-in space-y-1.5">
-          <Input
+        <div className="animate-fade-in">
+          <TokenAmountInput
             label="Amount to burn"
             value={amount}
-            onChange={(e) => setAmount(e.target.value.replace(/[^0-9]/g, ""))}
-            placeholder={`1 – ${selected.amount.toLocaleString()}`}
-            error={amountN > selected.amount ? "Exceeds record amount" : undefined}
+            onChange={setAmount}
+            decimals={decimals}
+            symbol={symbol}
+            max={selected.amount}
+            maxLabel="Burn all"
+            error={rawAmount > selected.amount ? "Exceeds record amount" : undefined}
           />
-          <button
-            onClick={() => setAmount(String(selected.amount))}
-            className="text-xs text-primary hover:underline"
-          >
-            Burn all ({selected.amount.toLocaleString()})
-          </button>
         </div>
       )}
 
@@ -78,7 +80,7 @@ export function BurnTab({ tokenRecords, onDone }: Props) {
         variant="accent"
         className="w-full"
       >
-        {!selected ? "Select a record" : !amount || amountN <= 0n ? "Enter amount" : "Burn Tokens"}
+        {!selected ? "Select a record" : rawAmount <= 0n ? "Enter amount" : "Burn Tokens"}
       </TransactionButton>
     </div>
   );

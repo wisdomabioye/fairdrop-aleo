@@ -1,5 +1,6 @@
 import type { AuctionConfig, AuctionState } from "@/shared/types/auction";
 import { useTokenMetadata } from "@/shared/hooks/useTokenMetadata";
+import { formatTokenAmount } from "@/shared/utils/formatting";
 import { CopyField } from "@/shared/components/CopyField";
 import { Card } from "@/shared/components/ui/Card";
 import { DataRow } from "@/shared/components/ui/DataRow";
@@ -36,6 +37,9 @@ export function AuctionInfo({ config, state, blockHeight }: Props) {
   const saleSymbol = saleMeta?.symbolStr ?? null;
   const paySymbol = payMeta?.symbolStr ?? null;
 
+  const fmtSale = (v: bigint) => formatTokenAmount(v, saleMeta);
+  const fmtPay = (v: bigint) => formatTokenAmount(v, payMeta);
+
   const demandPercent = state && config.supply > 0n
     ? Number((state.total_committed * 100n) / config.supply)
     : 0;
@@ -56,15 +60,15 @@ export function AuctionInfo({ config, state, blockHeight }: Props) {
         <div className="mt-4">
           <DataRow label="Sale Token" value={<TokenLabel symbol={saleMeta?.symbolStr} name={saleMeta?.nameStr} fallbackId={config.sale_token_id} />} />
           <DataRow label="Payment Token" value={<TokenLabel symbol={payMeta?.symbolStr} name={payMeta?.nameStr} fallbackId={config.payment_token_id} />} />
-          <DataRow label="Supply" value={<>{config.supply.toLocaleString()}{saleSymbol && <span className="ml-1 text-xs text-muted-foreground">{saleSymbol}</span>}</>} />
-          <DataRow label="Start Price" value={<>{config.start_price.toLocaleString()}{paySymbol && <span className="ml-1 text-xs text-muted-foreground">{paySymbol}</span>}</>} />
-          <DataRow label="Floor Price" value={<>{config.floor_price.toLocaleString()}{paySymbol && <span className="ml-1 text-xs text-muted-foreground">{paySymbol}</span>}</>} />
+          <DataRow label="Supply" value={<>{fmtSale(config.supply)}{saleSymbol && <span className="ml-1 text-xs text-muted-foreground">{saleSymbol}</span>}</>} />
+          <DataRow label="Start Price" value={<>{fmtPay(config.start_price)}{paySymbol && <span className="ml-1 text-xs text-muted-foreground">{paySymbol}</span>}</>} />
+          <DataRow label="Floor Price" value={<>{fmtPay(config.floor_price)}{paySymbol && <span className="ml-1 text-xs text-muted-foreground">{paySymbol}</span>}</>} />
           <DataRow label="Start Block" value={config.start_block.toLocaleString()} />
           <DataRow label="End Block" value={config.end_block.toLocaleString()} />
           <DataRow label="Decay Interval" value={`${config.price_decay_blocks} blocks`} />
-          <DataRow label="Decay Amount" value={<>{config.price_decay_amount.toLocaleString()}{paySymbol && <span className="ml-1 text-xs text-muted-foreground">{paySymbol}</span>}</>} />
-          <DataRow label="Min Bid" value={<>{config.min_bid_amount.toLocaleString()}{saleSymbol && <span className="ml-1 text-xs text-muted-foreground">{saleSymbol}</span>}</>} />
-          <DataRow label="Max Bid" value={config.max_bid_amount === 0n ? "Unlimited" : <>{config.max_bid_amount.toLocaleString()}{saleSymbol && <span className="ml-1 text-xs text-muted-foreground">{saleSymbol}</span>}</>} />
+          <DataRow label="Decay Amount" value={<>{fmtPay(config.price_decay_amount)}{paySymbol && <span className="ml-1 text-xs text-muted-foreground">{paySymbol}</span>}</>} />
+          <DataRow label="Min Bid" value={<>{fmtSale(config.min_bid_amount)}{saleSymbol && <span className="ml-1 text-xs text-muted-foreground">{saleSymbol}</span>}</>} />
+          <DataRow label="Max Bid" value={config.max_bid_amount === 0n ? "Unlimited" : <>{fmtSale(config.max_bid_amount)}{saleSymbol && <span className="ml-1 text-xs text-muted-foreground">{saleSymbol}</span>}</>} />
         </div>
       </Card>
 
@@ -73,14 +77,14 @@ export function AuctionInfo({ config, state, blockHeight }: Props) {
         <h4 className="mb-4 font-semibold text-foreground">Live State</h4>
         {state ? (
           <>
-            <DataRow label="Total Committed" value={<>{state.total_committed.toLocaleString()}{saleSymbol && <span className="ml-1 text-xs text-muted-foreground">{saleSymbol}</span>}</>} />
-            <DataRow label="Total Payments" value={<>{state.total_payments.toLocaleString()}{paySymbol && <span className="ml-1 text-xs text-muted-foreground">{paySymbol}</span>}</>} />
+            <DataRow label="Total Committed" value={<>{fmtSale(state.total_committed)}{saleSymbol && <span className="ml-1 text-xs text-muted-foreground">{saleSymbol}</span>}</>} />
+            <DataRow label="Total Payments" value={<>{fmtPay(state.total_payments)}{paySymbol && <span className="ml-1 text-xs text-muted-foreground">{paySymbol}</span>}</>} />
             <DataRow label="Supply Met" value={state.supply_met ? "Yes" : "No"} />
             <DataRow label="Cleared" value={state.cleared ? "Yes" : "No"} />
             {state.cleared && (
               <>
-                <DataRow label="Clearing Price" value={<>{state.clearing_price.toLocaleString()}{paySymbol && <span className="ml-1 text-xs text-muted-foreground">{paySymbol}</span>}</>} />
-                <DataRow label="Creator Revenue" value={<>{state.creator_revenue.toLocaleString()}{paySymbol && <span className="ml-1 text-xs text-muted-foreground">{paySymbol}</span>}</>} />
+                <DataRow label="Clearing Price" value={<>{fmtPay(state.clearing_price)}{paySymbol && <span className="ml-1 text-xs text-muted-foreground">{paySymbol}</span>}</>} />
+                <DataRow label="Creator Revenue" value={<>{fmtPay(state.creator_revenue)}{paySymbol && <span className="ml-1 text-xs text-muted-foreground">{paySymbol}</span>}</>} />
               </>
             )}
             {state.supply_met && state.ended_at_block > 0 && (
@@ -91,7 +95,7 @@ export function AuctionInfo({ config, state, blockHeight }: Props) {
               value={Math.min(100, demandPercent)}
               variant="primary"
               label="Demand"
-              detail={`${state.total_committed.toLocaleString()} / ${config.supply.toLocaleString()}${saleSymbol ? ` ${saleSymbol}` : ""}`}
+              detail={`${fmtSale(state.total_committed)} / ${fmtSale(config.supply)}${saleSymbol ? ` ${saleSymbol}` : ""}`}
               className="mt-4"
             />
 

@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useTransaction } from "@/shared/hooks/useTransaction";
 import { TOKEN_REGISTRY_PROGRAM_ID } from "@/config/network";
 import { asciiToU128 } from "@/shared/lib/auctionParsers";
+import { parseTokenAmount } from "@/shared/utils/formatting";
+import { TokenAmountInput } from "@/shared/components/ui/TokenAmountInput";
 import { Input } from "@/shared/components/ui/Input";
 import { Alert } from "@/shared/components/ui/Alert";
 import { TransactionButton } from "@/shared/components/TransactionButton";
@@ -37,7 +39,7 @@ export function Step1Register({ address, tokenId, onDone }: Props) {
   const nameR   = tryAscii(name);
   const symbolR = tryAscii(symbol);
   const dec     = parseInt(decimals, 10);
-  const maxN    = BigInt(maxSupply || "0");
+  const maxN    = parseTokenAmount(maxSupply, isNaN(dec) ? 0 : dec);
   const valid   = nameR.ok && symbolR.ok && symbol.length >= 2 &&
                   !isNaN(dec) && dec >= 0 && dec <= 18 && maxN > 0n;
 
@@ -83,8 +85,9 @@ export function Step1Register({ address, tokenId, onDone }: Props) {
       <div className="grid grid-cols-2 gap-4">
         <Input label="Decimals" type="number" min="0" max="18" value={decimals}
           onChange={(e) => setDecimals(e.target.value)} />
-        <Input label="Max Supply" type="number" min="1" placeholder="1000000" value={maxSupply}
-          onChange={(e) => setMaxSupply(e.target.value)} hint="Raw units (× 10^decimals)" />
+        <TokenAmountInput label="Max Supply" value={maxSupply}
+          onChange={setMaxSupply} decimals={isNaN(dec) ? 0 : dec}
+          placeholder="e.g. 1000000" hint="Human-readable total supply" />
       </div>
 
       {nameR.ok && symbolR.ok && name && symbol && (
@@ -92,7 +95,7 @@ export function Step1Register({ address, tokenId, onDone }: Props) {
           <p className="font-medium text-primary">Preview</p>
           <p className="mt-1 text-muted-foreground">
             {name} <span className="font-mono text-foreground">({symbol})</span>
-            {" · "}{dec} decimals{" · "}max {maxN.toLocaleString()} units
+            {" · "}{dec} decimals{" · "}max {Number(maxSupply || 0).toLocaleString() || "0"} tokens
           </p>
         </div>
       )}

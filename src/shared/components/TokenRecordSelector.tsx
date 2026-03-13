@@ -1,5 +1,7 @@
 import type { TokenRecord } from "@/shared/types/token";
+import type { TokenMetadata } from "@/shared/types/token";
 import { useTokenMetadata } from "@/shared/hooks/useTokenMetadata";
+import { formatTokenAmount } from "@/shared/utils/formatting";
 import { DropdownSelect } from "@/shared/components/ui/DropdownSelect";
 
 interface TokenRecordSelectorProps {
@@ -24,10 +26,7 @@ export function TokenRecordSelector({
   const tokenIds = [...new Set(filtered.map((r) => r.token_id))];
   const { metadataMap } = useTokenMetadata(tokenIds);
 
-  const getDisplay = (tokenId: string) => {
-    const meta = metadataMap.get(tokenId);
-    return { name: meta?.nameStr ?? null, symbol: meta?.symbolStr ?? null };
-  };
+  const getMeta = (tokenId: string) => metadataMap.get(tokenId) ?? null;
 
   return (
     <DropdownSelect
@@ -40,9 +39,9 @@ export function TokenRecordSelector({
       placeholder="Pick a token record…"
       emptyText="No matching token records found."
       spentLabel="spent"
-      renderTrigger={(r) => <TokenRow tokenId={r.token_id} amount={r.amount} getDisplay={getDisplay} />}
+      renderTrigger={(r) => <TokenRow tokenId={r.token_id} amount={r.amount} meta={getMeta(r.token_id)} />}
       renderOption={(r, { spent }) => (
-        <TokenRow tokenId={r.token_id} amount={r.amount} getDisplay={getDisplay} dimmed={spent} />
+        <TokenRow tokenId={r.token_id} amount={r.amount} meta={getMeta(r.token_id)} dimmed={spent} />
       )}
     />
   );
@@ -53,15 +52,16 @@ export function TokenRecordSelector({
 function TokenRow({
   tokenId,
   amount,
-  getDisplay,
+  meta,
   dimmed,
 }: {
   tokenId: string;
   amount: bigint;
-  getDisplay: (id: string) => { name: string | null; symbol: string | null };
+  meta: TokenMetadata | null;
   dimmed?: boolean;
 }) {
-  const { name, symbol } = getDisplay(tokenId);
+  const symbol = meta?.symbolStr ?? null;
+  const name = meta?.nameStr ?? null;
   return (
     <div className={`flex flex-1 items-center gap-2 min-w-0 ${dimmed ? "line-through" : ""}`}>
       {symbol && (
@@ -73,7 +73,7 @@ function TokenRow({
         {name ?? tokenId.slice(0, 16) + "…"}
       </span>
       <span className="ml-auto shrink-0 tabular-nums text-sm font-medium text-foreground">
-        {amount.toLocaleString()}
+        {formatTokenAmount(amount, meta)}
       </span>
     </div>
   );

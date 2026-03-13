@@ -2,6 +2,8 @@ import { useState, useMemo } from "react";
 import { useWallet } from "@provablehq/aleo-wallet-adaptor-react";
 import { useBidRecords } from "@/shared/hooks/useBidRecords";
 import { useTransaction } from "@/shared/hooks/useTransaction";
+import { useTokenMetadata } from "@/shared/hooks/useTokenMetadata";
+import { formatTokenAmount } from "@/shared/utils/formatting";
 import { useAuction } from "@/features/auction/hooks/useAuction";
 import { ConnectWalletPrompt } from "@/shared/components/ConnectWalletPrompt";
 import { BidRecordSelector } from "@/shared/components/RecordSelector";
@@ -20,6 +22,12 @@ export function ClaimPage() {
 
   const { config, state } = useAuction(selectedBid?.auction_id);
 
+  const { metadata: saleMeta } = useTokenMetadata(config?.sale_token_id);
+  const { metadata: payMeta } = useTokenMetadata(config?.payment_token_id);
+  const saleSymbol = saleMeta?.symbolStr ?? null;
+  const paySymbol = payMeta?.symbolStr ?? null;
+  const fmtSale = (v: bigint) => formatTokenAmount(v, saleMeta);
+  const fmtPay = (v: bigint) => formatTokenAmount(v, payMeta);
 
   const breakdown = useMemo(() => {
     if (!selectedBid || !state?.cleared) return null;
@@ -79,13 +87,13 @@ export function ClaimPage() {
               <h5 className="mb-2 text-sm font-semibold text-foreground">Claim Breakdown</h5>
               <DataRow
                 label="Sale tokens to receive"
-                value={<span className="font-medium text-success">{breakdown.saleTokens.toLocaleString()}</span>}
+                value={<span className="font-medium text-success">{fmtSale(breakdown.saleTokens)}{saleSymbol && <span className="ml-1 text-xs font-normal text-muted-foreground">{saleSymbol}</span>}</span>}
               />
-              <DataRow label="Clearing price"   value={breakdown.clearingPrice.toLocaleString()} />
-              <DataRow label="Cost at clearing" value={breakdown.costAtClearing.toLocaleString()} />
+              <DataRow label="Clearing price"   value={<>{fmtPay(breakdown.clearingPrice)}{paySymbol && <span className="ml-1 text-xs text-muted-foreground">{paySymbol}</span>}</>} />
+              <DataRow label="Cost at clearing" value={<>{fmtPay(breakdown.costAtClearing)}{paySymbol && <span className="ml-1 text-xs text-muted-foreground">{paySymbol}</span>}</>} />
               <DataRow
                 label="Payment refund"
-                value={<span className="font-semibold text-primary">{breakdown.refund.toLocaleString()}</span>}
+                value={<span className="font-semibold text-primary">{fmtPay(breakdown.refund)}{paySymbol && <span className="ml-1 text-xs font-normal text-muted-foreground">{paySymbol}</span>}</span>}
               />
             </div>
           )}

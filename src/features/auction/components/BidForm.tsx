@@ -3,12 +3,14 @@ import { Link } from "react-router-dom";
 import { Shield, Eye } from "lucide-react";
 import type { AuctionConfig } from "@/shared/types/auction";
 import type { CreditRecord } from "@/shared/types/token";
+import { CREDITS_DECIMALS } from "@/shared/types/token";
 import { useTransaction } from "@/shared/hooks/useTransaction";
 import { useTokenMetadata } from "@/shared/hooks/useTokenMetadata";
+import { formatTokenAmount, formatAmount, parseTokenAmount } from "@/shared/utils/formatting";
 import { TransactionButton } from "@/shared/components/TransactionButton";
 import { DropdownSelect } from "@/shared/components/ui/DropdownSelect";
+import { TokenAmountInput } from "@/shared/components/ui/TokenAmountInput";
 import { Card } from "@/shared/components/ui/Card";
-import { Input } from "@/shared/components/ui/Input";
 import { Alert } from "@/shared/components/ui/Alert";
 import { DataRow } from "@/shared/components/ui/DataRow";
 
@@ -29,10 +31,15 @@ export function BidForm({ config, currentPrice, creditRecords }: Props) {
   const { metadata: saleMeta } = useTokenMetadata(config.sale_token_id);
   const { metadata: payMeta } = useTokenMetadata(config.payment_token_id);
   const saleSymbol = saleMeta?.symbolStr ?? null;
-  const paySymbol = payMeta?.symbolStr ?? "µ";
+  const paySymbol = payMeta?.symbolStr ?? null;
+  const saleDecimals = saleMeta?.decimals ?? 0;
 
-  const qty = BigInt(quantity || "0");
-  const totalCost = qty * currentPrice;   // microcredits
+  const fmtSale = (v: bigint) => formatTokenAmount(v, saleMeta);
+  const fmtPay = (v: bigint) => formatTokenAmount(v, payMeta);
+  const fmtCredits = (v: bigint) => formatAmount(v, CREDITS_DECIMALS);
+
+  const qty = parseTokenAmount(quantity, saleDecimals);
+  const totalCost = qty * currentPrice;
 
   // payment_amount must fit in u64
   const paymentAmountU64 = totalCost <= 18446744073709551615n ? totalCost : 0n;
@@ -41,15 +48,16 @@ export function BidForm({ config, currentPrice, creditRecords }: Props) {
 
   const validation = useMemo(() => {
     if (qty <= 0n) return "Enter a quantity";
-    if (qty < config.min_bid_amount) return `Minimum bid: ${config.min_bid_amount.toLocaleString()}`;
+    if (qty < config.min_bid_amount) return `Minimum bid: ${fmtSale(config.min_bid_amount)}`;
     if (config.max_bid_amount > 0n && qty > config.max_bid_amount)
-      return `Maximum bid: ${config.max_bid_amount.toLocaleString()}`;
+      return `Maximum bid: ${fmtSale(config.max_bid_amount)}`;
     if (mode === "private") {
       if (!selectedRecord) return "Select a credits record";
       if (selectedRecord.microcredits < totalCost) return "Insufficient credits in record";
     }
     return null;
-  }, [qty, config, mode, selectedRecord, totalCost]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qty, config, mode, selectedRecord, totalCost, saleMeta]);
 
   const handleBid = async () => {
     if (validation) return;
@@ -101,11 +109,13 @@ export function BidForm({ config, currentPrice, creditRecords }: Props) {
             : "Deducted from your public credits.aleo balance. Both your address and bid amount are fully public."}
         </Alert>
 
-        <Input
-          label={`Quantity${saleSymbol ? ` (${saleSymbol})` : ""}`}
+        <TokenAmountInput
+          label="Quantity"
           value={quantity}
-          onChange={(e) => setQuantity(e.target.value.replace(/[^0-9]/g, ""))}
-          placeholder={`Min: ${config.min_bid_amount.toLocaleString()}`}
+          onChange={setQuantity}
+          decimals={saleDecimals}
+          symbol={saleSymbol}
+          placeholder={`Min: ${fmtSale(config.min_bid_amount)}`}
         />
 
         {/* Private: credit record selector */}
@@ -125,12 +135,12 @@ export function BidForm({ config, currentPrice, creditRecords }: Props) {
             }
             renderTrigger={(r) => (
               <span className="text-sm font-medium text-foreground">
-                {r.microcredits.toLocaleString()} µALEO
+                {fmtCredits(r.microcredits)} ALEO
               </span>
             )}
             renderOption={(r) => (
               <span className="flex-1 text-sm">
-                {r.microcredits.toLocaleString()} µALEO
+                {fmtCredits(r.microcredits)} ALEO
               </span>
             )}
           />
@@ -138,16 +148,16 @@ export function BidForm({ config, currentPrice, creditRecords }: Props) {
 
         {qty > 0n && (
           <div className="rounded-xl bg-secondary p-4">
-            <DataRow label={`Price per token (${paySymbol})`} value={currentPrice.toLocaleString()} border={false} />
+            <DataRow label={`Price per token${paySymbol ? ` (${paySymbol})` : ""}`} value={fmtPay(currentPrice)} border={false} />
             <DataRow
-              label={`Total cost (${paySymbol})`}
-              value={<span className="font-semibold text-primary">{totalCost.toLocaleString()}</span>}
+              label={`Total cost${paySymbol ? ` (${paySymbol})` : ""}`}
+              value={<span className="font-semibold text-primary">{fmtPay(totalCost)}</span>}
               border={false}
             />
             {mode === "private" && selectedRecord && (
               <DataRow
                 label="Change returned"
-                value={`${(selectedRecord.microcredits - totalCost).toLocaleString()} µALEO`}
+                value={`${fmtCredits(selectedRecord.microcredits - totalCost)} ALEO`}
                 border={false}
               />
             )}

@@ -1,4 +1,5 @@
 import type { CreatorToken } from "@/shared/hooks/useCreatorTokens";
+import { formatTokenAmount } from "@/shared/utils/formatting";
 import { DropdownSelect } from "@/shared/components/ui/DropdownSelect";
 
 interface Props {
@@ -38,7 +39,7 @@ function TokenRow({ token: t }: { token: CreatorToken }) {
         {name ?? t.tokenId.slice(0, 20) + "…"}
       </span>
       <span className="ml-auto shrink-0 tabular-nums text-sm font-medium text-muted-foreground">
-        {t.ownedAmount.toLocaleString()}
+        {formatTokenAmount(t.ownedAmount, t.metadata)}
       </span>
     </div>
   );

@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTransaction } from "@/shared/hooks/useTransaction";
+import { useTokenMetadata } from "@/shared/hooks/useTokenMetadata";
+import { formatTokenAmount, parseTokenAmount, toPlainAmount } from "@/shared/utils/formatting";
 import { TOKEN_REGISTRY_PROGRAM_ID } from "@/config/network";
 import { NO_EXPIRY } from "@/shared/types/token";
-import { Input } from "@/shared/components/ui/Input";
+import { TokenAmountInput } from "@/shared/components/ui/TokenAmountInput";
 import { Alert } from "@/shared/components/ui/Alert";
 import { TransactionButton } from "@/shared/components/TransactionButton";
 
@@ -14,22 +16,36 @@ interface Props {
 }
 
 export function Step2Mint({ address, tokenId, maxSupply, onDone }: Props) {
-  const [amount, setAmount] = useState(maxSupply.toString());
+  const { metadata: tokenMeta } = useTokenMetadata(tokenId);
+  const decimals = tokenMeta?.decimals ?? 0;
+  const symbol = tokenMeta?.symbolStr ?? null;
+
+  const [amount, setAmount] = useState("");
+  const seeded = useRef(false);
+
+  // Pre-fill with max supply once metadata is available
+  useEffect(() => {
+    if (tokenMeta && !seeded.current) {
+      seeded.current = true;
+      setAmount(toPlainAmount(maxSupply, decimals));
+    }
+  }, [tokenMeta, maxSupply, decimals]);
+
   const tx = useTransaction({
     programId: TOKEN_REGISTRY_PROGRAM_ID,
     label: "Mint Initial Supply",
     onConfirmed: () => onDone(),
   });
 
-  const amountN = BigInt(amount || "0");
-  const valid   = amountN > 0n && amountN <= maxSupply;
+  const rawAmount = parseTokenAmount(amount, decimals);
+  const valid     = rawAmount > 0n && rawAmount <= maxSupply;
 
   const handleMint = async () => {
     if (!valid) return;
     await tx.execute("mint_private", [
       tokenId,
       address,
-      `${amountN}u128`,
+      `${rawAmount}u128`,
       "false",
       `${NO_EXPIRY}u32`,
     ]);
@@ -42,15 +58,16 @@ export function Step2Mint({ address, tokenId, maxSupply, onDone }: Props) {
         creating an auction — the contract burns it and re-mints to winners at claim time.
       </p>
 
-      <Input
-        label="Amount (raw units)"
-        type="number"
-        min="1"
-        max={maxSupply.toString()}
+      <TokenAmountInput
+        label="Amount"
         value={amount}
-        onChange={(e) => setAmount(e.target.value)}
-        hint={`Max supply: ${maxSupply.toLocaleString()}`}
-        error={amountN > maxSupply ? "Exceeds max supply" : undefined}
+        onChange={setAmount}
+        decimals={decimals}
+        symbol={symbol}
+        max={maxSupply}
+        maxLabel="Max supply"
+        hint={`Max supply: ${formatTokenAmount(maxSupply, tokenMeta)}`}
+        error={rawAmount > maxSupply ? "Exceeds max supply" : undefined}
       />
 
       {tx.error && <Alert variant="error" title="Transaction failed">{tx.error}</Alert>}

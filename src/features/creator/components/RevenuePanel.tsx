@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { getCreatorWithdrawn, getUnsoldWithdrawn } from "@/shared/lib/mappings";
 import { useTokenMetadata } from "@/shared/hooks/useTokenMetadata";
+import { formatTokenAmount } from "@/shared/utils/formatting";
 import { Card } from "@/shared/components/ui/Card";
 import { DataRow } from "@/shared/components/ui/DataRow";
 import { Spinner } from "@/shared/components/ui/Spinner";
@@ -27,6 +28,9 @@ export function RevenuePanel({ auctionId, config, state, refetchTrigger }: Props
   const { metadata: payMeta } = useTokenMetadata(config.payment_token_id);
   const saleSymbol = saleMeta?.symbolStr ?? null;
   const paySymbol = payMeta?.symbolStr ?? null;
+
+  const fmtSale = (v: bigint) => formatTokenAmount(v, saleMeta);
+  const fmtPay = (v: bigint) => formatTokenAmount(v, payMeta);
 
   useEffect(() => {
     let cancelled = false;
@@ -58,23 +62,23 @@ export function RevenuePanel({ auctionId, config, state, refetchTrigger }: Props
   const remaining       = state.creator_revenue - withdrawn;
   const unsoldRemaining = unsoldSupply - unsoldWithdrawn;
 
-  /** Append token symbol suffix when available */
-  const pay = (v: string) => paySymbol ? <>{v} <span className="text-xs text-muted-foreground">{paySymbol}</span></> : v;
-  const sale = (v: string) => saleSymbol ? <>{v} <span className="text-xs text-muted-foreground">{saleSymbol}</span></> : v;
+  /** Formatted value + symbol suffix */
+  const pay = (v: bigint) => paySymbol ? <>{fmtPay(v)} <span className="text-xs text-muted-foreground">{paySymbol}</span></> : fmtPay(v);
+  const sale = (v: bigint) => saleSymbol ? <>{fmtSale(v)} <span className="text-xs text-muted-foreground">{saleSymbol}</span></> : fmtSale(v);
 
   return (
     <Card variant="gradient" padding="sm">
       <h4 className="mb-3 font-semibold text-foreground">Revenue Summary</h4>
-      <DataRow label="Clearing Price"  value={pay(state.clearing_price.toLocaleString())} />
-      <DataRow label="Total Payments"  value={pay(state.total_payments.toLocaleString())} />
-      <DataRow label="Creator Revenue" value={<span className="font-bold text-primary">{state.creator_revenue.toLocaleString()}{paySymbol && <span className="ml-1 text-xs font-normal text-muted-foreground">{paySymbol}</span>}</span>} />
-      <DataRow label="Withdrawn"       value={pay(withdrawn.toLocaleString())} />
-      <DataRow label="Remaining"       value={<span className="font-medium text-success">{remaining.toLocaleString()}{paySymbol && <span className="ml-1 text-xs font-normal text-muted-foreground">{paySymbol}</span>}</span>} />
+      <DataRow label="Clearing Price"  value={pay(state.clearing_price)} />
+      <DataRow label="Total Payments"  value={pay(state.total_payments)} />
+      <DataRow label="Creator Revenue" value={<span className="font-bold text-primary">{fmtPay(state.creator_revenue)}{paySymbol && <span className="ml-1 text-xs font-normal text-muted-foreground">{paySymbol}</span>}</span>} />
+      <DataRow label="Withdrawn"       value={pay(withdrawn)} />
+      <DataRow label="Remaining"       value={<span className="font-medium text-success">{fmtPay(remaining)}{paySymbol && <span className="ml-1 text-xs font-normal text-muted-foreground">{paySymbol}</span>}</span>} />
       {unsoldSupply > 0n && (
         <>
-          <DataRow label="Unsold Supply"     value={sale(unsoldSupply.toLocaleString())} />
-          <DataRow label="Unsold Withdrawn"  value={sale(unsoldWithdrawn.toLocaleString())} />
-          <DataRow label="Unsold Remaining"  value={<span className="font-medium text-warning">{unsoldRemaining.toLocaleString()}{saleSymbol && <span className="ml-1 text-xs font-normal text-muted-foreground">{saleSymbol}</span>}</span>} />
+          <DataRow label="Unsold Supply"     value={sale(unsoldSupply)} />
+          <DataRow label="Unsold Withdrawn"  value={sale(unsoldWithdrawn)} />
+          <DataRow label="Unsold Remaining"  value={<span className="font-medium text-warning">{fmtSale(unsoldRemaining)}{saleSymbol && <span className="ml-1 text-xs font-normal text-muted-foreground">{saleSymbol}</span>}</span>} />
         </>
       )}
     </Card>

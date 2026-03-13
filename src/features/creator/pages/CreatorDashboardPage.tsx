@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useTransaction } from "@/shared/hooks/useTransaction";
 import { useTokenMetadata } from "@/shared/hooks/useTokenMetadata";
+import { formatTokenAmount, parseTokenAmount } from "@/shared/utils/formatting";
 import { useAuction } from "@/features/auction/hooks/useAuction";
 import { StatusBadge } from "@/features/auction/components/StatusBadge";
 import { useBlockHeight } from "@/shared/hooks/useBlockHeight";
@@ -10,6 +11,7 @@ import { RevenuePanel } from "../components/RevenuePanel";
 import { Card } from "@/shared/components/ui/Card";
 import { Input } from "@/shared/components/ui/Input";
 import { Button } from "@/shared/components/ui/Button";
+import { TokenAmountInput } from "@/shared/components/ui/TokenAmountInput";
 import { PageHeader } from "@/shared/components/ui/PageHeader";
 import { Spinner } from "@/shared/components/ui/Spinner";
 import { getCreatorWithdrawn, getUnsoldWithdrawn } from "@/shared/lib/mappings";
@@ -26,6 +28,11 @@ export function CreatorDashboardPage() {
   const { metadata: payMeta } = useTokenMetadata(config?.payment_token_id);
   const saleSymbol = saleMeta?.symbolStr ?? null;
   const paySymbol = payMeta?.symbolStr ?? null;
+  const saleDecimals = saleMeta?.decimals ?? 0;
+  const payDecimals = payMeta?.decimals ?? 0;
+
+  const fmtSale = (v: bigint) => formatTokenAmount(v, saleMeta);
+  const fmtPay = (v: bigint) => formatTokenAmount(v, payMeta);
 
   const [withdrawn, setWithdrawn]           = useState(0n);
   const [unsoldWithdrawn, setUnsoldWithdrawn] = useState(0n);
@@ -63,6 +70,9 @@ export function CreatorDashboardPage() {
   const unsoldSupply    = config && state ? config.supply - state.total_committed : 0n;
   const maxWithdrawable = state?.cleared ? state.creator_revenue - withdrawn : 0n;
   const maxUnsold       = state?.cleared ? unsoldSupply - unsoldWithdrawn : 0n;
+
+  const rawPayment = parseTokenAmount(paymentAmount, payDecimals);
+  const rawUnsold  = parseTokenAmount(unsoldAmount, saleDecimals);
 
   return (
     <div className="mx-auto max-w-2xl space-y-8 animate-fade-in">
@@ -124,7 +134,7 @@ export function CreatorDashboardPage() {
               <p className="text-sm text-muted-foreground">
                 Closed at clearing price{" "}
                 <span className="font-medium text-foreground">
-                  {state.clearing_price.toLocaleString()}
+                  {fmtPay(state.clearing_price)}
                   {paySymbol && <span className="ml-1 text-xs text-muted-foreground">{paySymbol}</span>}
                 </span>.
               </p>
@@ -146,21 +156,24 @@ export function CreatorDashboardPage() {
                 <p className="text-sm text-muted-foreground">
                   Max withdrawable:{" "}
                   <span className="font-medium text-foreground">
-                    {maxWithdrawable.toLocaleString()}
+                    {fmtPay(maxWithdrawable)}
                     {paySymbol && <span className="ml-1 text-xs text-muted-foreground">{paySymbol}</span>}
                   </span>
                 </p>
-                <Input
-                  label={paySymbol ? `Amount (${paySymbol})` : "Amount"}
+                <TokenAmountInput
+                  label="Amount"
                   value={paymentAmount}
-                  onChange={(e) => setPaymentAmount(e.target.value.replace(/[^0-9]/g, ""))}
-                  placeholder={`Up to ${maxWithdrawable.toLocaleString()}`}
+                  onChange={setPaymentAmount}
+                  decimals={payDecimals}
+                  symbol={paySymbol}
+                  max={maxWithdrawable}
+                  placeholder={`Up to ${fmtPay(maxWithdrawable)}`}
                 />
                 <TransactionButton
-                  onClick={() => withdrawTx.execute("withdraw_payments", [config.auction_id, `${paymentAmount}u128`])}
+                  onClick={() => withdrawTx.execute("withdraw_payments", [config.auction_id, `${rawPayment}u128`])}
                   txStatus={withdrawTx.status}
                   loadingText="Withdrawing..."
-                  disabled={!paymentAmount || BigInt(paymentAmount || "0") <= 0n}
+                  disabled={rawPayment <= 0n}
                   variant="success"
                 >
                   Withdraw Payments
@@ -182,21 +195,24 @@ export function CreatorDashboardPage() {
                 <p className="text-sm text-muted-foreground">
                   Unsold supply:{" "}
                   <span className="font-medium text-foreground">
-                    {maxUnsold.toLocaleString()}
+                    {fmtSale(maxUnsold)}
                     {saleSymbol && <span className="ml-1 text-xs text-muted-foreground">{saleSymbol}</span>}
                   </span>
                 </p>
-                <Input
-                  label={saleSymbol ? `Amount (${saleSymbol})` : "Amount"}
+                <TokenAmountInput
+                  label="Amount"
                   value={unsoldAmount}
-                  onChange={(e) => setUnsoldAmount(e.target.value.replace(/[^0-9]/g, ""))}
-                  placeholder={`Up to ${maxUnsold.toLocaleString()}`}
+                  onChange={setUnsoldAmount}
+                  decimals={saleDecimals}
+                  symbol={saleSymbol}
+                  max={maxUnsold}
+                  placeholder={`Up to ${fmtSale(maxUnsold)}`}
                 />
                 <TransactionButton
-                  onClick={() => unsoldTx.execute("withdraw_unsold", [config.auction_id, `${unsoldAmount}u128`, config.sale_token_id])}
+                  onClick={() => unsoldTx.execute("withdraw_unsold", [config.auction_id, `${rawUnsold}u128`, config.sale_token_id])}
                   txStatus={unsoldTx.status}
                   loadingText="Withdrawing..."
-                  disabled={!unsoldAmount || BigInt(unsoldAmount || "0") <= 0n}
+                  disabled={rawUnsold <= 0n}
                   variant="warning"
                 >
                   Withdraw Unsold

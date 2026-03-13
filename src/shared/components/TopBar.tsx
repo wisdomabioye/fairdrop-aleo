@@ -16,7 +16,7 @@ const PAGE_TITLES: { prefix: string; title: string }[] = [
   { prefix: "/auction/",       title: "Auction" },
   { prefix: "/bids",           title: "My Bids" },
   { prefix: "/claim",          title: "Claim" },
-  { prefix: "/token-launch",         title: "Launch Token" },
+  { prefix: "/token-launch",         title: "Launch a Token" },
   { prefix: "/token-manager",         title: "Token Manager" },
   { prefix: "/guide",          title: "How It Works" },
   { prefix: "/",               title: "Dashboard" },
