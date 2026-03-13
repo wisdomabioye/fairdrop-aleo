@@ -21,11 +21,6 @@ export default function App() {
 
           <GlobalStats />
 
-          <div className="flex items-center justify-center gap-1.5 border-b border-border/50 bg-secondary/40 px-4 py-1.5 text-center text-xs text-warning">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-warning animate-pulse" />
-            On-chain data may take a few minutes to reflect. If records are missing: open your wallet → Advanced → <span className="font-semibold">Upgrade Records</span> or <span className="font-semibold">Sync Records</span>.
-          </div>
-
           <main className="flex-1 overflow-y-auto scrollbar-thin">
             <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
               <Outlet />
