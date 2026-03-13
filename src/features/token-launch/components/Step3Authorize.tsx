@@ -12,15 +12,18 @@ interface Props {
 }
 
 export function Step3Authorize({ tokenId, onDone }: Props) {
-  const tx = useTransaction({ programId: TOKEN_REGISTRY_PROGRAM_ID, label: "Authorize Auction Contract" });
+  const tx = useTransaction({
+    programId: TOKEN_REGISTRY_PROGRAM_ID,
+    label: "Authorize Auction Contract",
+    onConfirmed: () => onDone(),
+  });
 
   const handleAuthorize = async () => {
-    const txId = await tx.execute("set_role", [
+    await tx.execute("set_role", [
       tokenId,
       FAIRDROP_PROGRAM_ADDRESS,
       `${SUPPLY_MANAGER_ROLE}u8`,
     ]);
-    if (txId) onDone();
   };
 
   return (
@@ -40,7 +43,9 @@ export function Step3Authorize({ tokenId, onDone }: Props) {
       {tx.error && <Alert variant="error" title="Transaction failed">{tx.error}</Alert>}
 
       <TransactionButton
-        onClick={handleAuthorize} txStatus={tx.status}
+        onClick={handleAuthorize}
+        txStatus={tx.status}
+        disabled={tx.isSettling}
         className="w-full" variant="success"
       >
         Authorize Auction Contract

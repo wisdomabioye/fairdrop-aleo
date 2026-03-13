@@ -51,7 +51,7 @@ export function CreateAuctionPage() {
   const [startBlock, setStartBlock] = useState("");
   const [selectedRecord, setSelectedRecord] = useState<TokenRecord | null>(null);
   const [submittedTxId, setSubmittedTxId] = useState<string | null>(null);
-  const { execute, loading, status, error } = useTransaction();
+  const { execute, status, error } = useTransaction({ label: "Create Auction" });
 
   useEffect(() => {
     if (blockHeight > 0) {
@@ -294,7 +294,6 @@ export function CreateAuctionPage() {
       <TransactionButton
         onClick={handleCreate}
         txStatus={status}
-        loading={loading}
         disabled={!!validation}
         className="w-full"
       >

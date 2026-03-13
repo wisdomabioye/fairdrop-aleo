@@ -34,8 +34,6 @@ export function Step1Register({ address, tokenId, onDone }: Props) {
   const [symbol, setSymbol]   = useState("");
   const [decimals, setDecimals] = useState("6");
   const [maxSupply, setMaxSupply] = useState("");
-  const tx = useTransaction({ programId: TOKEN_REGISTRY_PROGRAM_ID, label: "Register Token" });
-
   const nameR   = tryAscii(name);
   const symbolR = tryAscii(symbol);
   const dec     = parseInt(decimals, 10);
@@ -43,18 +41,23 @@ export function Step1Register({ address, tokenId, onDone }: Props) {
   const valid   = nameR.ok && symbolR.ok && symbol.length >= 2 &&
                   !isNaN(dec) && dec >= 0 && dec <= 18 && maxN > 0n;
 
+  const tx = useTransaction({
+    programId: TOKEN_REGISTRY_PROGRAM_ID,
+    label: "Register Token",
+    onConfirmed: () => onDone(maxN),
+  });
+
   const handleSubmit = async () => {
     if (!valid || !nameR.ok || !symbolR.ok) return;
-    const txId = await tx.execute("register_token", [
+    await tx.execute("register_token", [
       tokenId,
       `${nameR.value}u128`,
       `${symbolR.value}u128`,
       `${dec}u8`,
       `${maxN}u128`,
       "false",
-      address,  // external_authorization_party placeholder
+      address,
     ]);
-    if (txId) onDone(maxN);
   };
 
   return (
@@ -95,7 +98,12 @@ export function Step1Register({ address, tokenId, onDone }: Props) {
       )}
 
       {tx.error && <Alert variant="error" title="Transaction failed">{tx.error}</Alert>}
-      <TransactionButton onClick={handleSubmit} txStatus={tx.status} disabled={!valid} className="w-full">
+      <TransactionButton
+        onClick={handleSubmit}
+        txStatus={tx.status}
+        disabled={!valid || tx.isSettling}
+        className="w-full"
+      >
         Register Token
       </TransactionButton>
     </div>

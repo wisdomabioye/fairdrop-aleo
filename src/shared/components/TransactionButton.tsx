@@ -4,16 +4,14 @@ import { Button } from "./ui/Button";
 import type { TxStatus } from "../hooks/useTransaction";
 
 interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
-  /** Pass useTransaction().status for automatic state-driven appearance */
+  /** Pass useTransaction().status for tracker-backed transaction appearance */
   txStatus?: TxStatus;
-  loading?: boolean;
   loadingText?: string;
   variant?: "primary" | "accent" | "success" | "warning";
 }
 
 export function TransactionButton({
   txStatus,
-  loading,
   loadingText = "Approving…",
   variant = "primary",
   children,
@@ -21,23 +19,26 @@ export function TransactionButton({
   disabled,
   ...props
 }: Props) {
-  const isSigning   = txStatus === "signing" || loading;
-  const isSubmitted = txStatus === "submitted";
+  const isSigning = txStatus === "signing";
+  const isPending = txStatus === "pending";
+  const isConfirmed = txStatus === "confirmed";
+  const isFailed = txStatus === "failed";
+  const isBusy = isSigning || isPending;
 
   return (
     <Button
-      variant={isSubmitted ? "success" : variant}
+      variant={isConfirmed ? "success" : isFailed ? "warning" : variant}
       size="lg"
-      loading={isSigning}
-      loadingText={loadingText}
-      disabled={disabled || isSigning || isSubmitted}
+      loading={isBusy}
+      loadingText={isSigning ? loadingText : "Confirming…"}
+      disabled={disabled || isBusy}
       className={className}
       {...props}
     >
-      {isSubmitted ? (
+      {isConfirmed ? (
         <span className="flex items-center gap-2">
           <Check className="h-4 w-4" />
-          Submitted
+          Confirmed
         </span>
       ) : (
         children

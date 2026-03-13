@@ -2,10 +2,15 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { useWallet } from "@provablehq/aleo-wallet-adaptor-react";
 import { PROGRAM_ID, FEE } from "@/config/network";
 import { TX_LABELS } from "@/constants";
-import { useTransactionTracker } from "../context/TransactionTrackerContext";
+import {
+  useTrackedTransaction,
+  useTransactionTracker,
+  type TrackedTx,
+  type TrackedTxStatus,
+} from "../context/TransactionTrackerContext";
 import type { ProgramFunction } from "@/constants";
 
-export type TxStatus = "idle" | "signing" | "submitted" | "error";
+export type TxStatus = "idle" | "signing" | TrackedTxStatus;
 
 interface UseTransactionOptions {
   /** Override the target program (default: PROGRAM_ID / fairdrop.aleo) */
@@ -14,36 +19,67 @@ interface UseTransactionOptions {
   privateFee?: boolean;
   /** Override the human-readable label shown in the tracker widget */
   label?: string;
+  /** Fires once when the tracked transaction reaches "confirmed" on-chain */
+  onConfirmed?: (txId: string) => void;
+  /** Fires once when the tracked transaction reaches "failed" */
+  onFailed?: (txId: string) => void;
 }
 
-export function useTransaction(options: UseTransactionOptions = {}) {
+interface UseTransactionResult {
+  execute: (functionName: ProgramFunction, inputs: string[]) => Promise<string | null>;
+  reset: () => void;
+  clearError: () => void;
+  status: TxStatus;
+  error: string | null;
+  txId: string | null;
+  trackedTransaction: TrackedTx | undefined;
+  isSettling: boolean;
+  isSettled: boolean;
+}
+
+export function useTransaction(options: UseTransactionOptions = {}): UseTransactionResult {
   const { address, executeTransaction } = useWallet();
-  const { addTransaction } = useTransactionTracker();
+  const { track } = useTransactionTracker();
 
-  // Keep options accessible inside execute without adding them to its deps
   const optionsRef = useRef(options);
-  useEffect(() => { optionsRef.current = options; });
+  optionsRef.current = options;
 
-  const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState<TxStatus>("idle");
+  const [signing, setSigning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [txId, setTxId] = useState<string | null>(null);
 
-  // Auto-reset "submitted" → "idle" after 3 s so buttons return to their normal state
+  const trackedTransaction = useTrackedTransaction(txId);
+
+  // Fire onConfirmed / onFailed exactly once when tracker status reaches a terminal state.
+  // We use a ref to track whether we already fired so React re-renders don't re-trigger.
+  const firedRef = useRef<"confirmed" | "failed" | null>(null);
+
   useEffect(() => {
-    if (status !== "submitted") return;
-    const timer = setTimeout(() => setStatus("idle"), 3_000);
-    return () => clearTimeout(timer);
-  }, [status]);
+    const s = trackedTransaction?.status;
+    if (!s || !txId) return;
+
+    if (s === "confirmed" && firedRef.current !== "confirmed") {
+      firedRef.current = "confirmed";
+      optionsRef.current.onConfirmed?.(txId);
+    } else if (s === "failed" && firedRef.current !== "failed") {
+      firedRef.current = "failed";
+      setError("Transaction failed on-chain");
+      optionsRef.current.onFailed?.(txId);
+    }
+  }, [trackedTransaction?.status, txId]);
+
+  const status: TxStatus =
+    signing ? "signing" : trackedTransaction?.status ?? "idle";
 
   const execute = useCallback(
     async (functionName: ProgramFunction, inputs: string[]): Promise<string | null> => {
       if (!address || !executeTransaction) return null;
 
-      setLoading(true);
-      setStatus("signing");
+      setSigning(true);
       setError(null);
       setTxId(null);
+      firedRef.current = null;
+
       const isPortError = (e: unknown) =>
         e instanceof Error && e.message.includes("Receiving end does not exist");
 
@@ -57,42 +93,55 @@ export function useTransaction(options: UseTransactionOptions = {}) {
         });
 
       try {
-        let result = await attempt().catch(async (e) => {
-          // Shield extension port not yet ready — wait and retry once.
+        const result = await attempt().catch(async (e) => {
           if (!isPortError(e)) throw e;
-          await new Promise((r) => setTimeout(r, 700));
+          await new Promise((resolve) => setTimeout(resolve, 700));
           return attempt();
         });
 
         if (!result) throw new Error("Transaction was not submitted");
-        const id = result.transactionId;
-        setTxId(id);
-        setStatus("submitted");
 
-        // Register in the global tracker so the widget picks it up
+        const id = result.transactionId;
         const label =
           optionsRef.current.label ??
           TX_LABELS[functionName as ProgramFunction] ??
           functionName;
-        addTransaction(id, label);
+
+        setTxId(id);
+        track(id, label);
 
         return id;
       } catch (e) {
-        const msg = e instanceof Error ? e.message : "Transaction failed";
-        setError(msg);
-        setStatus("error");
+        const message = e instanceof Error ? e.message : "Transaction failed";
+        setError(message);
         return null;
       } finally {
-        setLoading(false);
+        setSigning(false);
       }
     },
-    [address, executeTransaction, addTransaction],
+    [address, executeTransaction, track],
   );
+
+  const reset = useCallback(() => {
+    setTxId(null);
+    setError(null);
+    setSigning(false);
+    firedRef.current = null;
+  }, []);
 
   const clearError = useCallback(() => {
     setError(null);
-    setStatus("idle");
   }, []);
 
-  return { execute, loading, status, error, txId, clearError };
+  return {
+    execute,
+    reset,
+    clearError,
+    status,
+    error,
+    txId,
+    trackedTransaction,
+    isSettling: status === "signing" || status === "pending",
+    isSettled: status === "confirmed" || status === "failed",
+  };
 }

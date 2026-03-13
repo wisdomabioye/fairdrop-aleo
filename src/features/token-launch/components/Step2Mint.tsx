@@ -15,21 +15,24 @@ interface Props {
 
 export function Step2Mint({ address, tokenId, maxSupply, onDone }: Props) {
   const [amount, setAmount] = useState(maxSupply.toString());
-  const tx = useTransaction({ programId: TOKEN_REGISTRY_PROGRAM_ID, label: "Mint Initial Supply" });
+  const tx = useTransaction({
+    programId: TOKEN_REGISTRY_PROGRAM_ID,
+    label: "Mint Initial Supply",
+    onConfirmed: () => onDone(),
+  });
 
   const amountN = BigInt(amount || "0");
   const valid   = amountN > 0n && amountN <= maxSupply;
 
   const handleMint = async () => {
     if (!valid) return;
-    const txId = await tx.execute("mint_private", [
+    await tx.execute("mint_private", [
       tokenId,
       address,
       `${amountN}u128`,
       "false",
       `${NO_EXPIRY}u32`,
     ]);
-    if (txId) onDone();
   };
 
   return (
@@ -52,7 +55,12 @@ export function Step2Mint({ address, tokenId, maxSupply, onDone }: Props) {
 
       {tx.error && <Alert variant="error" title="Transaction failed">{tx.error}</Alert>}
 
-      <TransactionButton onClick={handleMint} txStatus={tx.status} disabled={!valid} className="w-full">
+      <TransactionButton
+        onClick={handleMint}
+        txStatus={tx.status}
+        disabled={!valid || tx.isSettling}
+        className="w-full"
+      >
         Mint Tokens
       </TransactionButton>
     </div>

@@ -1,8 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useWallet } from "@provablehq/aleo-wallet-adaptor-react";
 import { useTransaction } from "@/shared/hooks/useTransaction";
-import type { ProgramFunction } from "@/constants";
 import { useAuction } from "@/features/auction/hooks/useAuction";
 import { StatusBadge } from "@/features/auction/components/StatusBadge";
 import { useBlockHeight } from "@/shared/hooks/useBlockHeight";
@@ -11,13 +9,11 @@ import { RevenuePanel } from "../components/RevenuePanel";
 import { Card } from "@/shared/components/ui/Card";
 import { Input } from "@/shared/components/ui/Input";
 import { Button } from "@/shared/components/ui/Button";
-import { Alert } from "@/shared/components/ui/Alert";
 import { PageHeader } from "@/shared/components/ui/PageHeader";
 import { Spinner } from "@/shared/components/ui/Spinner";
 import { getCreatorWithdrawn, getUnsoldWithdrawn } from "@/shared/lib/mappings";
 
 export function CreatorDashboardPage() {
-  const { address } = useWallet();
   const { blockHeight } = useBlockHeight();
   const [searchParams] = useSearchParams();
   const idFromUrl = searchParams.get("id") ?? "";
@@ -29,10 +25,14 @@ export function CreatorDashboardPage() {
   const [unsoldWithdrawn, setUnsoldWithdrawn] = useState(0n);
   const [paymentAmount, setPaymentAmount]   = useState("");
   const [unsoldAmount, setUnsoldAmount]     = useState("");
-  const [txLoading, setTxLoading]           = useState<string | null>(null);
-  const [txError, setTxError]               = useState<string | null>(null);
-  const [txSuccess, setTxSuccess]           = useState<string | null>(null);
-  const { execute } = useTransaction();
+
+  // Refetch withdrawn amounts whenever any tx confirms
+  const [refetchKey, setRefetchKey] = useState(0);
+  const refetch = () => setRefetchKey((k) => k + 1);
+
+  const closeTx    = useTransaction({ label: "Close Auction", onConfirmed: refetch });
+  const withdrawTx = useTransaction({ label: "Withdraw Payments", onConfirmed: refetch });
+  const unsoldTx   = useTransaction({ label: "Withdraw Unsold", onConfirmed: refetch });
 
   const status = useMemo(() => {
     if (!config || !state) return "upcoming" as const;
@@ -51,27 +51,12 @@ export function CreatorDashboardPage() {
     getUnsoldWithdrawn(auctionId).then((raw) => {
       if (raw) setUnsoldWithdrawn(BigInt(raw.replace(/u128$/, "")));
     });
-  }, [auctionId, txSuccess]);
+  }, [auctionId, refetchKey]);
 
   const canClose        = (status === "supply_met" || status === "ended") && !state?.cleared;
   const unsoldSupply    = config && state ? config.supply - state.total_committed : 0n;
   const maxWithdrawable = state?.cleared ? state.creator_revenue - withdrawn : 0n;
   const maxUnsold       = state?.cleared ? unsoldSupply - unsoldWithdrawn : 0n;
-
-  const executeTx = async (fn: ProgramFunction, inputs: string[], label: string) => {
-    if (!address) return;
-    setTxLoading(label);
-    setTxError(null);
-    setTxSuccess(null);
-    try {
-      await execute(fn, inputs);
-      setTxSuccess(label);
-    } catch (e) {
-      setTxError(e instanceof Error ? e.message : "Transaction failed");
-    } finally {
-      setTxLoading(null);
-    }
-  };
 
   return (
     <div className="mx-auto max-w-2xl space-y-8 animate-fade-in">
@@ -103,12 +88,11 @@ export function CreatorDashboardPage() {
             <span className="font-mono text-xs text-muted-foreground">{config.auction_id}</span>
           </div>
 
-          {/* Revenue summary — self-contained component */}
           <RevenuePanel
             auctionId={config.auction_id}
             config={config}
             state={state}
-            refetchTrigger={txSuccess}
+            refetchTrigger={refetchKey > 0 ? String(refetchKey) : null}
           />
 
           {/* Close Auction */}
@@ -122,8 +106,8 @@ export function CreatorDashboardPage() {
                     : "Auction has passed its end block. Close to finalize at floor price."}
                 </p>
                 <TransactionButton
-                  onClick={() => executeTx("close_auction", [config.auction_id], "close")}
-                  loading={txLoading === "close"}
+                  onClick={() => closeTx.execute("close_auction", [config.auction_id])}
+                  txStatus={closeTx.status}
                   loadingText="Closing..."
                   variant="accent"
                 >
@@ -142,6 +126,7 @@ export function CreatorDashboardPage() {
                   : `Available once supply is met or auction passes block ${config.end_block.toLocaleString()}.`}
               </p>
             )}
+            {closeTx.error && <p className="mt-2 text-sm text-destructive">{closeTx.error}</p>}
           </Card>
 
           {/* Withdraw Payments */}
@@ -158,8 +143,8 @@ export function CreatorDashboardPage() {
                   placeholder={`Up to ${maxWithdrawable.toLocaleString()}`}
                 />
                 <TransactionButton
-                  onClick={() => executeTx("withdraw_payments", [config.auction_id, `${paymentAmount}u128`], "withdraw_payments")}
-                  loading={txLoading === "withdraw_payments"}
+                  onClick={() => withdrawTx.execute("withdraw_payments", [config.auction_id, `${paymentAmount}u128`])}
+                  txStatus={withdrawTx.status}
                   loadingText="Withdrawing..."
                   disabled={!paymentAmount || BigInt(paymentAmount || "0") <= 0n}
                   variant="success"
@@ -172,6 +157,7 @@ export function CreatorDashboardPage() {
             ) : (
               <p className="text-sm text-muted-foreground">Available after the auction is closed and cleared.</p>
             )}
+            {withdrawTx.error && <p className="mt-2 text-sm text-destructive">{withdrawTx.error}</p>}
           </Card>
 
           {/* Withdraw Unsold */}
@@ -188,8 +174,8 @@ export function CreatorDashboardPage() {
                   placeholder={`Up to ${maxUnsold.toLocaleString()}`}
                 />
                 <TransactionButton
-                  onClick={() => executeTx("withdraw_unsold", [config.auction_id, `${unsoldAmount}u128`, config.sale_token_id], "withdraw_unsold")}
-                  loading={txLoading === "withdraw_unsold"}
+                  onClick={() => unsoldTx.execute("withdraw_unsold", [config.auction_id, `${unsoldAmount}u128`, config.sale_token_id])}
+                  txStatus={unsoldTx.status}
                   loadingText="Withdrawing..."
                   disabled={!unsoldAmount || BigInt(unsoldAmount || "0") <= 0n}
                   variant="warning"
@@ -206,10 +192,8 @@ export function CreatorDashboardPage() {
             ) : (
               <p className="text-sm text-muted-foreground">Available after the auction is closed.</p>
             )}
+            {unsoldTx.error && <p className="mt-2 text-sm text-destructive">{unsoldTx.error}</p>}
           </Card>
-
-          {txError && <p className="text-sm text-destructive">{txError}</p>}
-          {txSuccess && <Alert variant="success" title="Transaction submitted successfully!" />}
         </div>
       )}
     </div>

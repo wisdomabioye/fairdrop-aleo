@@ -16,8 +16,7 @@ export function ClaimPage() {
   const { address } = useWallet();
   const { bidRecords } = useBidRecords();
   const [selectedBid, setSelectedBid] = useState<BidRecord | null>(null);
-  const [success, setSuccess] = useState(false);
-  const claimTx = useTransaction();
+  const claimTx = useTransaction({ label: "Claim Tokens" });
 
   const { config, state } = useAuction(selectedBid?.auction_id);
 
@@ -41,10 +40,7 @@ export function ClaimPage() {
       `${state.clearing_price}u128`,
       config.sale_token_id,
     ]);
-    if (txId) {
-      setSuccess(true);
-      setSelectedBid(null);
-    }
+    if (txId) setSelectedBid(null);
   };
 
   return (
@@ -96,9 +92,9 @@ export function ClaimPage() {
 
           {claimTx.error && <p className="text-sm text-destructive">{claimTx.error}</p>}
 
-          {success && (
-            <Alert variant="success" title="Claim submitted!">
-              You will receive your sale tokens and refund once confirmed.
+          {claimTx.status === "confirmed" && (
+            <Alert variant="success" title="Claim confirmed!">
+              Your sale tokens and refund have been delivered.
             </Alert>
           )}
 
