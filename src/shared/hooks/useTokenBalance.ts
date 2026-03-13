@@ -16,7 +16,7 @@ interface Result {
 }
 
 /**
- * Fetch the connected wallet's public balance for any ARC-21 token.
+ * Fetch the connected wallet's public balance for any ARC-20 token.
  *
  * For CREDITS_RESERVED_TOKEN_ID, queries credits.aleo/account directly (microcredits).
  * For all other tokens, queries token_registry.aleo/authorized_balances → balances.

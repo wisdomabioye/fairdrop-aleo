@@ -59,7 +59,7 @@ export async function fetchTokenMetadata(tokenId: string): Promise<TokenMetadata
 
 /**
  * Fetch the public balance for (account, tokenId).
- * Tries `authorized_balances` first (most ARC-21 tokens), falls back to `balances`.
+ * Tries `authorized_balances` first (most ARC-20 tokens), falls back to `balances`.
  * Returns null if the account has no balance or if the hash computation fails.
  */
 export async function fetchTokenBalance(

@@ -27,7 +27,7 @@ const steps: Step[] = [
     icon: Rocket,
     title: "Launch a Token",
     description:
-      "Register your token on ARC-21, mint the initial supply, and authorize the auction contract to distribute it.",
+      "Register your token on ARC-20, mint the initial supply, and authorize the auction contract to distribute it.",
     link: { to: AppRoutes.tokenLaunch, label: "Launch Token" },
     accent: "from-blue-500/20 to-cyan-500/20",
   },

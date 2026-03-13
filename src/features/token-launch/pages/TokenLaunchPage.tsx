@@ -25,7 +25,7 @@ export function TokenLaunchPage() {
     <div className="mx-auto max-w-lg space-y-8 animate-fade-in">
       <PageHeader
         title="Token Launch"
-        description="Register a token on ARC-21, mint initial supply, and authorize the auction contract to mint at claim time."
+        description="Register a token on ARC-20, mint initial supply, and authorize the auction contract to mint at claim time."
         action={step !== "done" ? <StepIndicator current={stepIndex} /> : undefined}
       />
 
