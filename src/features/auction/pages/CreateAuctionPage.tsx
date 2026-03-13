@@ -50,7 +50,7 @@ export function CreateAuctionPage() {
   const { blockHeight } = useBlockHeight();
   const { tokenRecords } = useTokenRecords();
   const { creatorTokens, loading: tokensLoading } = useCreatorTokens();
-  const [form, setForm, clearDraft] = useLocalStorage<FormState>("auction-draft-form", defaultForm);
+  const [form, setForm, clearDraft] = useLocalStorage<FormState>("auction-draft-v2", defaultForm);
   const [startBlock, setStartBlock] = useState("");
   const [selectedRecord, setSelectedRecord] = useState<TokenRecord | null>(null);
   const [submittedTxId, setSubmittedTxId] = useState<string | null>(null);
@@ -136,25 +136,29 @@ export function CreateAuctionPage() {
 
   const handleCreate = async () => {
     if (validation || !selectedRecord) return;
-    const rawStartPrice = parseTokenAmount(form.startPrice, CREDITS_DECIMALS);
-    const rawFloorPrice = parseTokenAmount(form.floorPrice, CREDITS_DECIMALS);
-    const rawDecayAmount = parseTokenAmount(form.priceDecayAmount, CREDITS_DECIMALS);
-    const rawMaxBid = parseTokenAmount(form.maxBidAmount, saleDecimals);
-    const rawMinBid = parseTokenAmount(form.minBidAmount, saleDecimals);
-    const txId = await execute("create_auction", [
+    // const rawStartPrice = parseTokenAmount(form.startPrice, CREDITS_DECIMALS);
+    // const rawFloorPrice = parseTokenAmount(form.floorPrice, CREDITS_DECIMALS);
+    // const rawDecayAmount = parseTokenAmount(form.priceDecayAmount, CREDITS_DECIMALS);
+    // const rawMaxBid = parseTokenAmount(form.maxBidAmount, saleDecimals);
+    // const rawMinBid = parseTokenAmount(form.minBidAmount, saleDecimals);
+
+    const auctionCreateParams = [
       selectedRecord._record,               // private Token record — burned on-chain
       form.saleTokenId,
       CREDITS_RESERVED_TOKEN_ID,
       `${selectedRecord.amount}u128`,       // supply = full record amount (already raw)
-      `${rawStartPrice}u128`,
-      `${rawFloorPrice}u128`,
+      `${form.startPrice}u128`,
+      `${form.floorPrice}u128`,
       `${startBlock}u32`,
       `${form.endBlock}u32`,
       `${form.priceDecayBlocks}u32`,
-      `${rawDecayAmount}u128`,
-      `${rawMaxBid}u128`,
-      `${rawMinBid}u128`,
-    ]);
+      
+      `${form.priceDecayAmount}u128`,
+      `${form.maxBidAmount}u128`,
+      `${form.minBidAmount}u128`,
+    ]
+    console.log(auctionCreateParams)
+    const txId = await execute("create_auction", auctionCreateParams);
     if (txId) {
       clearDraft();
       setSelectedRecord(null);
