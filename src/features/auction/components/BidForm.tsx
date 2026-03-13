@@ -11,6 +11,7 @@ import { ConnectButton } from "@/shared/components/wallet/ConnectButton";
 import { formatTokenAmount, formatAmount, parseTokenAmount } from "@/shared/utils/formatting";
 import { TransactionButton } from "@/shared/components/TransactionButton";
 import { DropdownSelect } from "@/shared/components/ui/DropdownSelect";
+import { AppRoutes } from "@/config/app.route";
 import { TokenAmountInput } from "@/shared/components/ui/TokenAmountInput";
 import { Card } from "@/shared/components/ui/Card";
 import { Alert } from "@/shared/components/ui/Alert";
@@ -133,8 +134,8 @@ export function BidForm({ config, currentPrice, creditRecords }: Props) {
             placeholder="Pick a credits record…"
             emptyText="No credits records found."
             emptyHint={
-              <Link to="/faucet" className="text-xs text-primary hover:underline">
-                Get credits from faucet.
+              <Link to={AppRoutes.shield} className="text-xs text-primary hover:underline">
+                Shield public credits to get a private record.
               </Link>
             }
             renderTrigger={(r) => (

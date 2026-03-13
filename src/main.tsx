@@ -15,6 +15,7 @@ import { CreatorDashboardPage } from "./features/creator/pages/CreatorDashboardP
 import { TokenManagerPage } from "./features/token-manager/pages/TokenManagerPage";
 import { TokenLaunchPage } from "./features/token-launch/pages/TokenLaunchPage";
 import { GuidePage } from "./features/guide/pages/GuidePage";
+import { ShieldPage } from "./features/shield/pages/ShieldPage";
 
 function Root() {
   return (
@@ -31,6 +32,7 @@ function Root() {
               <Route path="claim" element={<ClaimPage />} />
               <Route path="token-manager" element={<TokenManagerPage />} />
               <Route path="token-launch" element={<TokenLaunchPage />} />
+              <Route path="shield" element={<ShieldPage />} />
               {/* Legacy redirect */}
               <Route path="guide" element={<GuidePage />} />
             </Route>

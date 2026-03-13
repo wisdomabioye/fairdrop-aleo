@@ -4,7 +4,9 @@ export type ProgramFunction =
   | "create_auction" | "place_bid_private" | "place_bid_public" | "claim"
   | "close_auction" | "withdraw_payments" | "withdraw_unsold"
   // token_registry.aleo
-  | "register_token" | "mint_private" | "burn_private" | "set_role" | "remove_role";
+  | "register_token" | "mint_private" | "burn_private" | "set_role" | "remove_role"
+  // credits.aleo
+  | "transfer_public_to_private";
 
 /** Human-readable labels for Aleo program function names */
 export const TX_LABELS: Record<ProgramFunction, string> = {
@@ -15,11 +17,12 @@ export const TX_LABELS: Record<ProgramFunction, string> = {
   close_auction:     "Close Auction",
   withdraw_payments: "Withdraw Payments",
   withdraw_unsold:   "Withdraw Unsold",
-  register_token:    "Register Token",
-  mint_private:      "Mint Tokens",
-  burn_private:      "Burn Tokens",
-  set_role:          "Set Role",
-  remove_role:       "Remove Role",
+  register_token:              "Register Token",
+  mint_private:                "Mint Tokens",
+  burn_private:                "Burn Tokens",
+  set_role:                    "Set Role",
+  remove_role:                 "Remove Role",
+  transfer_public_to_private:  "Shield Credits",
 };
 
 export interface TestToken {

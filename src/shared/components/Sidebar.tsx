@@ -8,6 +8,7 @@ import {
   Droplets,
   Layers,
   BookOpen,
+  ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
 import { AppRoutes } from "@/config/app.route";
@@ -56,6 +57,7 @@ const sections: NavSection[] = [
     title: "Tools",
     items: [
       { to: AppRoutes.tokenManager, label: "Token Manager", icon: Layers },
+      { to: AppRoutes.shield, label: "Shield Credits", icon: ShieldCheck },
     ],
   },
   {

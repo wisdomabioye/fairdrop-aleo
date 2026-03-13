@@ -15,6 +15,7 @@ export const AppRoutes = {
 
     // Tools
     tokenManager: "/token-manager",
+    shield: "/shield",
 
     // Guide
     howItWorks: "/guide"
